@@ -12,6 +12,8 @@ ghcr.io/jethac/stash:sha-<short-sha>
 ghcr.io/jethac/stash:custom
 ```
 
+The custom deployment image is built for `linux/amd64`, matching the DS1522+ CPU. Do not use this image for ARM Synology models unless the workflow is expanded again.
+
 Use the immutable `sha-<short-sha>` tag when testing a specific PR build. Use `media-library-improvements` when tracking the branch.
 
 ## Pre-Deploy Backup

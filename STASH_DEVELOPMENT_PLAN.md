@@ -135,7 +135,7 @@ Status: in progress.
 
 Tasks:
 
-- Add or reuse GitHub Actions workflow for multi-platform Docker image builds. (Complete)
+- Add or reuse GitHub Actions workflow for Synology amd64 Docker image builds. (Complete)
 - Publish to GitHub Container Registry under `ghcr.io/jethac/stash`. (Complete)
 - Tag images by branch SHA and optional semantic label. (Complete)
 - On Synology, back up the Stash config directory and database.
