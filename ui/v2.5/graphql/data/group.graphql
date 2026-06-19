@@ -26,8 +26,7 @@ fragment GroupData on Group {
   synopsis
   urls
   localized_titles {
-    language_code
-    title
+    ...LocalizedTitleData
   }
   front_image_path
   back_image_path
@@ -76,8 +75,7 @@ fragment ListGroupData on Group {
   synopsis
   urls
   localized_titles {
-    language_code
-    title
+    ...LocalizedTitleData
   }
   front_image_path
   back_image_path

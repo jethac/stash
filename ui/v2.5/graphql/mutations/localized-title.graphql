@@ -1,0 +1,9 @@
+mutation LocalizedTitleUpsert($input: LocalizedTitleCreateInput!) {
+  localizedTitleUpsert(input: $input) {
+    ...LocalizedTitleData
+  }
+}
+
+mutation LocalizedTitleDestroy($id: ID!) {
+  localizedTitleDestroy(id: $id)
+}
