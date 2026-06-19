@@ -113,7 +113,7 @@ Validation:
 
 ## Phase 5: Metadata Import Helpers
 
-Status: in progress.
+Status: complete.
 
 Completed:
 
@@ -128,19 +128,19 @@ Completed:
 - Support Plex database derived movie/group exports where source data is reliable.
 - Generate a real Plex-derived Ero movie/group export with poster/front-image data URLs and path rewriting from `/medialibrary/Ero` to `/data`.
 - Dry-run the real Plex-derived export against production Stash: 823 groups, 1,012 localized titles, 889 scene links, zero conflicts, zero missing scenes, and zero writes.
-
-Remaining tasks:
-
-- Back up production Stash config/database before any apply run.
-- Apply a verified movie/group import so `/movies` contains real poster-driven records.
+- Back up production Stash config/database before the apply run to `/volume1/docker/backups/stash-20260619-164135-pre-group-import/config`.
+- Apply the verified Plex-derived group import to production Stash: 823 groups, 1,012 localized titles, and 889 planned scene links.
+- Fill the remaining 411 groups without Plex poster art from linked-scene screenshots, leaving zero groups missing front images.
+- Repair the one multi-file-scene import edge case where a later scene update replaced an earlier group link; final production state is 823 groups, 1,012 localized group titles, 889 group-scene links across 888 distinct scenes, and zero unlinked groups.
+- Update `scripts/group_import` so scene link updates preserve existing scene groups when adding a new one.
 
 Validation:
 
 - `go test ./scripts/localized_titles_backfill`
 - `go test ./scripts/group_import`
-- Dry-run against a copied database or fixture.
+- Dry-run against production before apply with zero conflicts, zero missing scenes, and zero writes.
 - Upsert test with duplicate language/object pairs.
-- Backup and restore drill before running on production data.
+- Production backup verified before import. A restore drill was not executed.
 
 ## Phase 6: Docker Image And Synology Deployment
 
@@ -155,17 +155,18 @@ Tasks:
 - Pull the finished image on Synology. (Complete for current deployment)
 - Update the Stash container image reference. (Complete for current deployment)
 - Restart the container. (Complete for current deployment)
-- Smoke test login, movie list, movie detail, localized title edit, and scene playback.
+- Smoke test HTTP access to `/`, `/movies`, and `/scenes`. (Complete)
+- Smoke test production GraphQL counts for movies, localized titles, posters, multi-scene groups, and performer incidence sorting. (Complete)
+- Smoke test rendered login, movie list, movie detail, localized title edit, and scene playback in a browser.
 
 Synology rule:
 
 - Never compile Go, run frontend builds, or run Docker image builds on the NAS.
-- Use Synology only for `docker pull`, container restart, and runtime smoke tests.
+- Use Synology only for `docker pull`, container restart, database backup/verification, and runtime smoke tests.
+- Build amd64 images on GitHub Actions or a real build host such as the Ubicloud `hijinks-build-x64` VM, not on the Synology CPU.
 
 ## Recommended Next Work
 
-1. Produce a real movie/group CSV or JSON export from Plex or another reliable source.
-2. Dry-run `scripts/group_import` against production Stash and inspect conflicts.
-3. Back up production Stash config/database, then apply the verified group import.
-4. Dry-run and apply `scripts/localized_titles_backfill` for any additional localized titles not included in the group import.
-5. Smoke test `/movies` with real groups, poster images, localized title switching/editing, performer incidence sorting, and scene playback.
+1. Run rendered browser smoke tests for `/movies`, movie detail, localized title switching/editing, performer incidence sorting, and scene playback.
+2. Decide whether to deploy the latest scripts-only image build; no Synology runtime redeploy is required for the completed metadata import.
+3. If GitHub Actions becomes too slow or unreliable, configure the Ubicloud `hijinks-build-x64` VM as the amd64 build host or self-hosted runner.

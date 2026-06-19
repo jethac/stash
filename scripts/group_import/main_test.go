@@ -245,6 +245,48 @@ func TestImporterApplyLinksScene(t *testing.T) {
 	}
 }
 
+func TestImporterApplyPreservesExistingSceneGroups(t *testing.T) {
+	index := 3
+	client := &fakeClient{
+		groups: map[string]groupRef{
+			"Movie A": {ID: "12", Name: "Movie A"},
+		},
+		scenes: map[string]sceneRef{
+			"/data/Movie A.mp4": {
+				ID:    "99",
+				Title: "Movie A",
+				Path:  "/data/Movie A.mp4",
+				Groups: []groupRef{
+					{ID: "9", Name: "Existing Movie", SceneIndex: &index},
+				},
+			},
+		},
+	}
+	importer := importer{cfg: config{Apply: true}, client: client}
+	records := []groupRecord{
+		{Line: 2, Name: "Movie A", ScenePath: "/data/Movie A.mp4"},
+	}
+
+	var out bytes.Buffer
+	summary, err := importer.run(context.Background(), records, &out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if summary.LinkScene != 1 {
+		t.Fatalf("unexpected summary %#v\n%s", summary, out.String())
+	}
+	scene := client.scenes["/data/Movie A.mp4"]
+	if len(scene.Groups) != 2 {
+		t.Fatalf("scene groups = %#v", scene.Groups)
+	}
+	if scene.Groups[0].ID != "9" || scene.Groups[0].SceneIndex == nil || *scene.Groups[0].SceneIndex != index {
+		t.Fatalf("existing scene group was not preserved: %#v", scene.Groups)
+	}
+	if scene.Groups[1].ID != "12" {
+		t.Fatalf("new scene group was not appended: %#v", scene.Groups)
+	}
+}
+
 type fakeClient struct {
 	groups map[string]groupRef
 	titles map[string]existingTitle
@@ -316,10 +358,10 @@ func (f *fakeClient) findSceneByPath(_ context.Context, path string) (*sceneRef,
 	return &scene, nil
 }
 
-func (f *fakeClient) addGroupToScene(_ context.Context, sceneID, groupID string, _ *int) error {
+func (f *fakeClient) addGroupToScene(_ context.Context, target sceneRef, groupID string, sceneIndex *int) error {
 	for path, scene := range f.scenes {
-		if scene.ID == sceneID {
-			scene.Groups = append(scene.Groups, groupRef{ID: groupID})
+		if scene.ID == target.ID {
+			scene.Groups = append(scene.Groups, groupRef{ID: groupID, SceneIndex: sceneIndex})
 			f.scenes[path] = scene
 			return nil
 		}

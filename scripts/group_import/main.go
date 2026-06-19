@@ -60,8 +60,9 @@ type localizedTitleRecord struct {
 }
 
 type groupRef struct {
-	ID   string
-	Name string
+	ID         string
+	Name       string
+	SceneIndex *int
 }
 
 type existingTitle struct {
@@ -130,7 +131,7 @@ type stashClient interface {
 	findLocalizedTitle(ctx context.Context, objectType, objectID, languageCode string) (*existingTitle, error)
 	upsertLocalizedTitle(ctx context.Context, objectType, objectID string, title localizedTitleRecord) error
 	findSceneByPath(ctx context.Context, path string) (*sceneRef, error)
-	addGroupToScene(ctx context.Context, sceneID, groupID string, sceneIndex *int) error
+	addGroupToScene(ctx context.Context, scene sceneRef, groupID string, sceneIndex *int) error
 }
 
 func main() {
@@ -398,7 +399,7 @@ func (i importer) planOrApplySceneLink(ctx context.Context, rec groupRecord, ref
 	if !i.cfg.Apply {
 		return result{Action: actionWouldLinkScene, Line: rec.Line, Object: scene.ID + ":" + ref.ID, Detail: "scene path matched " + scene.Path}
 	}
-	if err := i.client.addGroupToScene(ctx, scene.ID, ref.ID, sceneIndex); err != nil {
+	if err := i.client.addGroupToScene(ctx, *scene, ref.ID, sceneIndex); err != nil {
 		return result{Action: actionError, Line: rec.Line, Object: scene.ID + ":" + ref.ID, Detail: err.Error()}
 	}
 	return result{Action: actionLinkScene, Line: rec.Line, Object: scene.ID + ":" + ref.ID, Detail: "applied"}
@@ -882,7 +883,8 @@ query FindSceneForGroupImport($path: String!) {
 					Path string `json:"path"`
 				} `json:"files"`
 				Groups []struct {
-					Group groupRef `json:"group"`
+					SceneIndex *int     `json:"scene_index"`
+					Group      groupRef `json:"group"`
 				} `json:"groups"`
 			} `json:"scenes"`
 		} `json:"findScenes"`
@@ -907,12 +909,13 @@ query FindSceneForGroupImport($path: String!) {
 		ret.Path = scene.Files[0].Path
 	}
 	for _, group := range scene.Groups {
+		group.Group.SceneIndex = group.SceneIndex
 		ret.Groups = append(ret.Groups, group.Group)
 	}
 	return ret, nil
 }
 
-func (c *graphqlClient) addGroupToScene(ctx context.Context, sceneID, groupID string, sceneIndex *int) error {
+func (c *graphqlClient) addGroupToScene(ctx context.Context, scene sceneRef, groupID string, sceneIndex *int) error {
 	const mutation = `
 mutation LinkGroupToSceneForGroupImport($input: SceneUpdateInput!) {
   sceneUpdate(input: $input) {
@@ -920,13 +923,23 @@ mutation LinkGroupToSceneForGroupImport($input: SceneUpdateInput!) {
   }
 }`
 
+	groupInputs := make([]map[string]any, 0, len(scene.Groups)+1)
+	for _, group := range scene.Groups {
+		input := map[string]any{"group_id": group.ID}
+		if group.SceneIndex != nil {
+			input["scene_index"] = *group.SceneIndex
+		}
+		groupInputs = append(groupInputs, input)
+	}
 	groupInput := map[string]any{"group_id": groupID}
 	if sceneIndex != nil {
 		groupInput["scene_index"] = *sceneIndex
 	}
+	groupInputs = append(groupInputs, groupInput)
+
 	input := map[string]any{
-		"id":     sceneID,
-		"groups": []map[string]any{groupInput},
+		"id":     scene.ID,
+		"groups": groupInputs,
 	}
 
 	var out struct {
@@ -935,7 +948,7 @@ mutation LinkGroupToSceneForGroupImport($input: SceneUpdateInput!) {
 		} `json:"sceneUpdate"`
 	}
 	if err := c.do(ctx, mutation, map[string]any{"input": input}, &out); err != nil {
-		return fmt.Errorf("linking scene %s to group %s: %w", sceneID, groupID, err)
+		return fmt.Errorf("linking scene %s to group %s: %w", scene.ID, groupID, err)
 	}
 	if out.SceneUpdate == nil {
 		return errors.New("sceneUpdate returned null")
