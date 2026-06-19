@@ -61,7 +61,7 @@ Validation:
 
 ## Phase 3: Localized Title UI
 
-Status: in progress.
+Status: complete.
 
 Completed:
 
@@ -72,12 +72,13 @@ Completed:
 - Add movie/group detail title-language selector.
 - Add localized title search/filter support.
 - Add a missing-localized-title filter for cleanup.
+- Keep title language selection per-view for this build rather than adding a global setting.
+- Add localized title display to the compressed movie/group detail header.
+- Defer scene localized-title editing until the movie/group workflow is proven.
 
 Remaining tasks:
 
-- Decide whether to add a global title-language preference in settings.
-- Add localized title display to other movie detail surfaces, such as sticky/compressed headers if needed.
-- Consider scene localized-title editing after movie/group workflow stabilizes.
+- None.
 
 Validation:
 

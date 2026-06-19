@@ -483,7 +483,10 @@ const GroupPage: React.FC<IProps> = PatchComponent(
         </div>
 
         {!isEditing && loadStickyHeader && (
-          <CompressedGroupDetailsPanel group={group} />
+          <CompressedGroupDetailsPanel
+            group={group}
+            displayTitle={displayTitle}
+          />
         )}
 
         <div className="detail-body">
