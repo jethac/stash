@@ -53,12 +53,13 @@ import {
 } from "../List/Filters/FilterSidebar";
 import { PatchComponent, PatchContainerComponent } from "src/patch";
 import { Pagination, PaginationIndex } from "../List/Pagination";
-import { Button } from "react-bootstrap";
+import { Button, ButtonGroup } from "react-bootstrap";
 import useFocus from "src/utils/focus";
 import { useZoomKeybinds } from "../List/ZoomSlider";
 import { FilteredListToolbar } from "../List/FilteredListToolbar";
 import { FilterTags } from "../List/FilterTags";
 import { SidebarFolderFilter } from "../List/Filters/FolderFilter";
+import { IsMissingCriterion } from "src/models/list-filter/criteria/is-missing";
 
 function renderMetadataByline(result: GQL.FindScenesQueryResult) {
   const duration = result?.data?.findScenes?.duration;
@@ -248,6 +249,21 @@ const SceneList: React.FC<{
 const ScenesFilterSidebarSections = PatchContainerComponent(
   "FilteredSceneList.SidebarSections"
 );
+
+const sceneCleanupFilters = [
+  {
+    value: "group",
+    messageID: "scene_cleanup.ungrouped",
+  },
+  {
+    value: "performers",
+    messageID: "scene_cleanup.missing_performers",
+  },
+  {
+    value: "studio",
+    messageID: "scene_cleanup.missing_studio",
+  },
+] as const;
 
 const SidebarContent: React.FC<{
   filter: ListFilterModel;
@@ -487,6 +503,23 @@ export const FilteredSceneList = PatchComponent(
     const playRandom = usePlayRandom(effectiveFilter, totalCount);
     const playSelected = usePlaySelected(selectedIds);
     const playFirst = usePlayFirst();
+    const isScenesRoute = location.pathname.startsWith("/scenes");
+    const activeMissingCriterion = filter.criteriaFor("is_missing")[0] as
+      | IsMissingCriterion
+      | undefined;
+
+    function setSceneCleanupFilter(value: string) {
+      if (activeMissingCriterion?.value === value) {
+        setFilter(filter.removeCriterion("is_missing"));
+        return;
+      }
+
+      const criterion = filter.makeCriterion(
+        "is_missing"
+      ) as IsMissingCriterion;
+      criterion.value = value;
+      setFilter(filter.replaceCriteria("is_missing", [criterion]));
+    }
 
     function onCreateNew() {
       const queryParam = new URLSearchParams(location.search).get("q");
@@ -639,6 +672,29 @@ export const FilteredSceneList = PatchComponent(
       />
     );
 
+    const sceneCleanupControl = isScenesRoute && (
+      <div className="scene-cleanup-control">
+        <span className="scene-cleanup-control__label">
+          {intl.formatMessage({ id: "scene_cleanup.title" })}
+        </span>
+        <ButtonGroup size="sm">
+          {sceneCleanupFilters.map((cleanupFilter) => (
+            <Button
+              key={cleanupFilter.value}
+              variant={
+                activeMissingCriterion?.value === cleanupFilter.value
+                  ? "primary"
+                  : "secondary"
+              }
+              onClick={() => setSceneCleanupFilter(cleanupFilter.value)}
+            >
+              {intl.formatMessage({ id: cleanupFilter.messageID })}
+            </Button>
+          ))}
+        </ButtonGroup>
+      </div>
+    );
+
     return (
       <TaggerContext>
         <div
@@ -677,6 +733,8 @@ export const FilteredSceneList = PatchComponent(
                   view={view}
                   zoomable
                 />
+
+                {sceneCleanupControl}
 
                 <FilterTags
                   criteria={filter.criteria}

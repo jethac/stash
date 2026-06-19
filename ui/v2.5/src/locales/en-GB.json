@@ -1439,6 +1439,12 @@
   "resolution": "Resolution",
   "resume_time": "Resume Time",
   "scene": "Scene",
+  "scene_cleanup": {
+    "missing_performers": "Missing performers",
+    "missing_studio": "Missing studio",
+    "title": "Cleanup",
+    "ungrouped": "Ungrouped scenes"
+  },
   "sceneTagger": "Scene Tagger",
   "scene_code": "Studio Code",
   "scene_count": "Scene Count",
