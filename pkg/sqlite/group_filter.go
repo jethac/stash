@@ -81,6 +81,7 @@ func (qb *groupFilterHandler) criterionHandler() criterionHandler {
 		groupHierarchyHandler.ChildrenCriterionHandler(groupFilter.SubGroups),
 		groupHierarchyHandler.ParentCountCriterionHandler(groupFilter.ContainingGroupCount),
 		groupHierarchyHandler.ChildCountCriterionHandler(groupFilter.SubGroupCount),
+		qb.performerCountCriterionHandler(groupFilter.PerformerCount),
 		&timestampCriterionHandler{groupFilter.CreatedAt, "groups.created_at", nil},
 		&timestampCriterionHandler{groupFilter.UpdatedAt, "groups.updated_at", nil},
 
@@ -112,7 +113,7 @@ func (qb *groupFilterHandler) missingCriterionHandler(isMissing *string) criteri
 	return func(ctx context.Context, f *filterBuilder) {
 		if isMissing != nil && *isMissing != "" {
 			switch *isMissing {
-			case "front_image":
+			case "front_image", "poster":
 				f.addWhere("groups.front_image_blob IS NULL")
 			case "back_image":
 				f.addWhere("groups.back_image_blob IS NULL")
@@ -239,6 +240,24 @@ func (qb *groupFilterHandler) sceneCountCriterionHandler(count *models.IntCriter
 
 	return h.handler(count)
 }
+
+func (qb *groupFilterHandler) performerCountCriterionHandler(count *models.IntCriterionInput) criterionHandlerFunc {
+	return func(ctx context.Context, f *filterBuilder) {
+		if count == nil {
+			return
+		}
+
+		lhs := "(" + selectGroupPerformerCountSQL + ")"
+		clause, args := getIntCriterionWhereClause(lhs, *count)
+
+		f.addWhere(clause, args...)
+	}
+}
+
+const selectGroupPerformerCountSQL = `SELECT COUNT(DISTINCT performers_scenes.performer_id)
+FROM groups_scenes
+INNER JOIN performers_scenes ON groups_scenes.scene_id = performers_scenes.scene_id
+WHERE groups_scenes.group_id = groups.id`
 
 // used for sorting and filtering on group o-count
 var selectGroupOCountSQL = utils.StrFormat(

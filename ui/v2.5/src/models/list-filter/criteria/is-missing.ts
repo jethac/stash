@@ -136,6 +136,7 @@ export const GroupIsMissingCriterionOption = new IsMissingCriterionOption(
     "studio",
     "performers",
     "tags",
+    "poster",
     "front_image",
     "back_image",
     "scenes",

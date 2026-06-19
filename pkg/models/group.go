@@ -35,6 +35,8 @@ type GroupFilterType struct {
 	SubGroupCount *IntCriterionInput `json:"sub_group_count"`
 	// Filter by number of scenes the group has
 	SceneCount *IntCriterionInput `json:"scene_count"`
+	// Filter by number of performers appearing in the group's scenes
+	PerformerCount *IntCriterionInput `json:"performer_count"`
 	// Filter by related scenes that meet this criteria
 	ScenesFilter *SceneFilterType `json:"scenes_filter"`
 	// Filter by related studios that meet this criteria

@@ -498,6 +498,7 @@ var groupSortOptions = sortOptions{
 	"name",
 	"random",
 	"rating",
+	"performer_count",
 	"scenes_count",
 	"o_counter",
 	"sub_group_description",
@@ -546,6 +547,8 @@ func (qb *GroupStore) setGroupSort(query *queryBuilder, findFilter *models.FindF
 		query.sortAndPagination += getCountSort(groupTable, groupsTagsTable, groupIDColumn, direction)
 	case "scenes_count": // generic getSort won't work for this
 		query.sortAndPagination += getCountSort(groupTable, groupsScenesTable, groupIDColumn, direction)
+	case "performer_count":
+		query.sortAndPagination += " ORDER BY (" + selectGroupPerformerCountSQL + ") " + direction
 	case "o_counter":
 		query.sortAndPagination += qb.sortByOCounter(direction)
 	default:

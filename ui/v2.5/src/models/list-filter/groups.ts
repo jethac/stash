@@ -38,6 +38,10 @@ const sortByOptions = [
       value: "scenes_count",
     },
     {
+      messageID: "performer_count",
+      value: "performer_count",
+    },
+    {
       messageID: "o_count",
       value: "o_counter",
       sfwMessageID: "o_count_sfw",
@@ -66,6 +70,7 @@ const criterionOptions = [
   TagsCriterionOption,
   createMandatoryNumberCriterionOption("tag_count"),
   createMandatoryNumberCriterionOption("scene_count"),
+  createMandatoryNumberCriterionOption("performer_count"),
   createMandatoryTimestampCriterionOption("created_at"),
   createMandatoryTimestampCriterionOption("updated_at"),
   CustomFieldsCriterionOption,
