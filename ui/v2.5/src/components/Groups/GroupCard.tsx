@@ -10,9 +10,15 @@ import { SceneLink, TagLink } from "../Shared/TagLink";
 import { TruncatedText } from "../Shared/TruncatedText";
 import { FormattedMessage } from "react-intl";
 import { RatingBanner } from "../Shared/RatingBanner";
-import { faPlayCircle, faTag } from "@fortawesome/free-solid-svg-icons";
+import {
+  faFilm,
+  faPlayCircle,
+  faTag,
+  faUser,
+} from "@fortawesome/free-solid-svg-icons";
 import { RelatedGroupPopoverButton } from "./RelatedGroupPopover";
 import { OCounterButton } from "../Shared/CountButton";
+import TextUtils from "src/utils/text";
 
 const Description: React.FC<{
   sceneNumber?: number;
@@ -66,6 +72,11 @@ export const GroupCard: React.FC<IProps> = PatchComponent(
     const basePath = location.pathname.startsWith("/movies")
       ? "/movies"
       : "/groups";
+    const metadata = [
+      group.date?.slice(0, 4),
+      group.studio?.name,
+      group.duration ? TextUtils.secondsToTimestamp(group.duration) : undefined,
+    ].filter((value): value is string => !!value);
 
     const groupDescription = useMemo(() => {
       if (!fromGroupId) {
@@ -153,6 +164,42 @@ export const GroupCard: React.FC<IProps> = PatchComponent(
       }
     }
 
+    function renderPoster() {
+      if (group.front_image_path) {
+        return (
+          <img
+            loading="lazy"
+            className="group-card-image"
+            alt={group.name ?? ""}
+            src={group.front_image_path}
+          />
+        );
+      }
+
+      return (
+        <div className="group-card__missing-poster">
+          <Icon icon={faFilm} />
+          <span>
+            <FormattedMessage id="missing_poster" defaultMessage="No poster" />
+          </span>
+        </div>
+      );
+    }
+
+    function maybeRenderMetadata() {
+      if (metadata.length === 0) return null;
+
+      return (
+        <div className="group-card__meta">
+          {metadata.map((value) => (
+            <span key={value} className="group-card__meta-item">
+              {value}
+            </span>
+          ))}
+        </div>
+      );
+    }
+
     return (
       <GridCard
         className={`group-card zoom-${zoomIndex}`}
@@ -164,22 +211,27 @@ export const GroupCard: React.FC<IProps> = PatchComponent(
         linkClassName="group-card-header"
         image={
           <>
-            <img
-              loading="lazy"
-              className="group-card-image"
-              alt={group.name ?? ""}
-              src={group.front_image_path ?? ""}
-            />
+            {renderPoster()}
             <RatingBanner rating={group.rating100} />
           </>
         }
         details={
           <div className="group-card__details">
-            <span className="group-card__date">{group.date}</span>
+            {maybeRenderMetadata()}
+            <div className="group-card__counts">
+              <span className="group-card__count">
+                <Icon icon={faPlayCircle} />
+                {group.scene_count}
+              </span>
+              <span className="group-card__count">
+                <Icon icon={faUser} />
+                {group.performer_count}
+              </span>
+            </div>
             <TruncatedText
               className="group-card__description"
               text={group.synopsis}
-              lineCount={3}
+              lineCount={2}
             />
           </div>
         }
