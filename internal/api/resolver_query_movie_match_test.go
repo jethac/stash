@@ -39,6 +39,30 @@ func TestMovieMatchPlanOptionsInputTokenOverridesEnvironment(t *testing.T) {
 	}
 }
 
+func TestMovieMatchPlanOptionsAcceptsSceneIDsWithoutRoots(t *testing.T) {
+	t.Setenv("TMDB_BEARER_TOKEN", "env-token")
+	cfg, err := movieMatchPlanOptions(MovieMatchPlanInput{
+		SceneIds: []string{"12", "12", "34"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(cfg.roots) != 0 {
+		t.Fatalf("roots = %#v", cfg.roots)
+	}
+	if got, want := cfg.sceneIDs, []int{12, 34}; len(got) != len(want) || got[0] != want[0] || got[1] != want[1] {
+		t.Fatalf("sceneIDs = %#v, want %#v", got, want)
+	}
+}
+
+func TestMovieMatchPlanOptionsRequiresRootsOrSceneIDs(t *testing.T) {
+	t.Setenv("TMDB_BEARER_TOKEN", "env-token")
+	_, err := movieMatchPlanOptions(MovieMatchPlanInput{})
+	if err == nil || !strings.Contains(err.Error(), "missing roots or scene_ids") {
+		t.Fatalf("err = %v", err)
+	}
+}
+
 func TestMovieMatchPlanOptionsRequiresToken(t *testing.T) {
 	t.Setenv("TMDB_BEARER_TOKEN", "")
 	t.Setenv("TMDB_API_READ_ACCESS_TOKEN", "")

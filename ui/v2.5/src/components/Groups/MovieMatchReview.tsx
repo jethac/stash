@@ -196,6 +196,53 @@ function sceneGroupsWithNewGroup(
   return groups;
 }
 
+function uniqueSceneIDs(items: MovieMatchReportItem[]) {
+  return Array.from(
+    new Set(
+      items
+        .map((item) => item.SceneID)
+        .filter((sceneID): sceneID is string => !!sceneID)
+    )
+  );
+}
+
+function replaceReportItemsByScene(
+  currentItems: MovieMatchReportItem[],
+  replacementItems: MovieMatchReportItem[],
+  sceneIDs: string[]
+) {
+  const replaceIDs = new Set(sceneIDs);
+  const replacementByScene = new Map<string, MovieMatchReportItem[]>();
+  for (const item of replacementItems) {
+    if (!replacementByScene.has(item.SceneID)) {
+      replacementByScene.set(item.SceneID, []);
+    }
+    replacementByScene.get(item.SceneID)?.push(item);
+  }
+
+  const next: MovieMatchReportItem[] = [];
+  const inserted = new Set<string>();
+  for (const item of currentItems) {
+    if (!replaceIDs.has(item.SceneID)) {
+      next.push(item);
+      continue;
+    }
+    if (inserted.has(item.SceneID)) {
+      continue;
+    }
+    next.push(...(replacementByScene.get(item.SceneID) ?? []));
+    inserted.add(item.SceneID);
+  }
+
+  for (const sceneID of sceneIDs) {
+    if (!inserted.has(sceneID)) {
+      next.push(...(replacementByScene.get(sceneID) ?? []));
+    }
+  }
+
+  return next;
+}
+
 export const MovieMatchReview: React.FC = () => {
   const [report, setReport] = useState<MovieMatchReport>();
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -206,6 +253,7 @@ export const MovieMatchReview: React.FC = () => {
   const [roots, setRoots] = useState("");
   const [tmdbToken, setTMDBToken] = useState("");
   const [minConfidence, setMinConfidence] = useState(0.9);
+  const [overwrite, setOverwrite] = useState(false);
   const [createdGroupIDs, setCreatedGroupIDs] = useState<
     Record<string, string>
   >({});
@@ -301,6 +349,7 @@ export const MovieMatchReview: React.FC = () => {
             roots: parsedRoots,
             ...(token ? { tmdb_token: token } : {}),
             min_confidence: minConfidence,
+            overwrite,
           },
         },
       });
@@ -310,6 +359,55 @@ export const MovieMatchReview: React.FC = () => {
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
+  }
+
+  async function generateScenePlan(sceneIDs: string[]) {
+    if (sceneIDs.length === 0) {
+      throw new Error("Select at least one scene to rematch");
+    }
+    const token = tmdbToken.trim();
+    const result = await loadMovieMatchPlan({
+      variables: {
+        input: {
+          scene_ids: sceneIDs,
+          ...(token ? { tmdb_token: token } : {}),
+          min_confidence: minConfidence,
+          overwrite,
+        },
+      },
+    });
+    const plan = result.data?.movieMatchPlan;
+    if (!plan) throw new Error("Movie match plan returned no data");
+    return nativeReport(plan);
+  }
+
+  async function rematchSceneIDs(sceneIDs: string[]) {
+    try {
+      setError(undefined);
+      const refreshed = await generateScenePlan(sceneIDs);
+      if (!report) {
+        loadReport(refreshed);
+        return;
+      }
+      loadReport({
+        ...report,
+        generated_at: refreshed.generated_at,
+        mode: refreshed.mode,
+        items: replaceReportItemsByScene(
+          report.items,
+          refreshed.items,
+          sceneIDs
+        ),
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  function selectedSceneIDs() {
+    return uniqueSceneIDs(
+      items.filter((_, index) => selected.has(index) && !skipped.has(index))
+    );
   }
 
   function toggle(index: number) {
@@ -567,6 +665,12 @@ export const MovieMatchReview: React.FC = () => {
               setMinConfidence(Number(event.currentTarget.value))
             }
           />
+          <Form.Check
+            id="movie-match-overwrite"
+            checked={overwrite}
+            label="Overwrite"
+            onChange={(event) => setOverwrite(event.currentTarget.checked)}
+          />
           <Button
             variant="secondary"
             disabled={movieMatchPlan.loading}
@@ -607,6 +711,22 @@ export const MovieMatchReview: React.FC = () => {
             {report.generated_at && <span>{report.generated_at}</span>}
           </div>
           <div className="movie-match-review__bulk-actions">
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={movieMatchPlan.loading || items.length === 0}
+              onClick={() => void rematchSceneIDs(uniqueSceneIDs(items))}
+            >
+              Rematch all
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={movieMatchPlan.loading || selected.size === 0}
+              onClick={() => void rematchSceneIDs(selectedSceneIDs())}
+            >
+              Rematch selected
+            </Button>
             <Button size="sm" variant="secondary" onClick={selectActionableRows}>
               Select actionable
             </Button>
@@ -699,15 +819,25 @@ export const MovieMatchReview: React.FC = () => {
                 )}
               </td>
               <td>
-                {isActionable(item) && (
+                <div className="movie-match-review__row-actions">
+                  {isActionable(item) && (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => toggleSkipped(index)}
+                    >
+                      {skipped.has(index) ? "Unskip" : "Skip"}
+                    </Button>
+                  )}
                   <Button
                     size="sm"
                     variant="secondary"
-                    onClick={() => toggleSkipped(index)}
+                    disabled={movieMatchPlan.loading}
+                    onClick={() => void rematchSceneIDs([item.SceneID])}
                   >
-                    {skipped.has(index) ? "Unskip" : "Skip"}
+                    Rematch
                   </Button>
-                )}
+                </div>
               </td>
               <td>{applyState[index] ?? item.Detail}</td>
             </tr>

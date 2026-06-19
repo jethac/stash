@@ -1,5 +1,8 @@
 input MovieMatchPlanInput {
-  roots: [String!]!
+  "Path roots to scan for bulk matching. Either roots or scene_ids must be provided."
+  roots: [String!]
+  "Specific scenes to re-read from Stash and re-query against TMDB."
+  scene_ids: [ID!]
   "Optional TMDB v3 read-access token. Defaults to TMDB_BEARER_TOKEN or TMDB_API_READ_ACCESS_TOKEN on the server."
   tmdb_token: String
   cache_dir: String

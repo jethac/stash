@@ -370,7 +370,7 @@ button.flip {
 
     th:nth-child(8),
     td:nth-child(8) {
-      width: 6rem;
+      width: 7rem;
     }
 
     td {
@@ -419,6 +419,11 @@ button.flip {
     .form-check-label {
       overflow-wrap: anywhere;
     }
+  }
+
+  &__row-actions {
+    display: grid;
+    gap: 0.35rem;
   }
 }
 

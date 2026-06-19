@@ -40,10 +40,22 @@ func (r *queryResolver) MovieMatchPlan(ctx context.Context, input MovieMatchPlan
 		return nil, err
 	}
 
-	records, err := r.movieMatchPlanScenes(ctx, options.roots, options.perPage)
-	if err != nil {
-		return nil, err
+	var records []movieMatchScenePlanRecord
+	if len(options.roots) > 0 {
+		rootRecords, err := r.movieMatchPlanScenes(ctx, options.roots, options.perPage)
+		if err != nil {
+			return nil, err
+		}
+		records = append(records, rootRecords...)
 	}
+	if len(options.sceneIDs) > 0 {
+		sceneRecords, err := r.movieMatchPlanScenesByID(ctx, options.sceneIDs)
+		if err != nil {
+			return nil, err
+		}
+		records = append(records, sceneRecords...)
+	}
+	records = movieMatchDeduplicateSceneRecords(records)
 
 	provider := moviematch.NewTMDBClient(moviematch.TMDBOptions{
 		Token:        options.tmdbToken,
@@ -71,6 +83,7 @@ func (r *queryResolver) MovieMatchPlan(ctx context.Context, input MovieMatchPlan
 
 type movieMatchPlanConfig struct {
 	roots         []string
+	sceneIDs      []int
 	tmdbToken     string
 	cacheDir      string
 	includeAdult  bool
@@ -83,7 +96,6 @@ type movieMatchPlanConfig struct {
 
 func movieMatchPlanOptions(input MovieMatchPlanInput) (movieMatchPlanConfig, error) {
 	ret := movieMatchPlanConfig{
-		roots:         make([]string, 0, len(input.Roots)),
 		tmdbToken:     movieMatchTMDBToken(input.TmdbToken),
 		includeAdult:  true,
 		minConfidence: 0.9,
@@ -91,10 +103,28 @@ func movieMatchPlanOptions(input MovieMatchPlanInput) (movieMatchPlanConfig, err
 		translations:  []string{"en-US", "ja-JP", "fr-FR"},
 		perPage:       200,
 	}
-	for _, root := range input.Roots {
-		root = moviematch.CleanSlashPath(root)
-		if root != "" {
-			ret.roots = append(ret.roots, root)
+	if input.Roots != nil {
+		ret.roots = make([]string, 0, len(input.Roots))
+		for _, root := range input.Roots {
+			root = moviematch.CleanSlashPath(root)
+			if root != "" {
+				ret.roots = append(ret.roots, root)
+			}
+		}
+	}
+	if input.SceneIds != nil {
+		ret.sceneIDs = make([]int, 0, len(input.SceneIds))
+		seenSceneIDs := make(map[int]struct{})
+		for _, id := range input.SceneIds {
+			sceneID, err := strconv.Atoi(id)
+			if err != nil || sceneID <= 0 {
+				return ret, fmt.Errorf("invalid scene id %q", id)
+			}
+			if _, ok := seenSceneIDs[sceneID]; ok {
+				continue
+			}
+			seenSceneIDs[sceneID] = struct{}{}
+			ret.sceneIDs = append(ret.sceneIDs, sceneID)
 		}
 	}
 	if input.CacheDir != nil {
@@ -119,8 +149,8 @@ func movieMatchPlanOptions(input MovieMatchPlanInput) (movieMatchPlanConfig, err
 		ret.overwrite = *input.Overwrite
 	}
 
-	if len(ret.roots) == 0 {
-		return ret, errors.New("missing roots")
+	if len(ret.roots) == 0 && len(ret.sceneIDs) == 0 {
+		return ret, errors.New("missing roots or scene_ids")
 	}
 	if ret.tmdbToken == "" {
 		return ret, errors.New("missing TMDB token; set TMDB_BEARER_TOKEN on the server or pass tmdb_token")
@@ -194,6 +224,58 @@ func (r *queryResolver) movieMatchPlanScenes(ctx context.Context, roots []string
 		return movieMatchPrimaryPath(ret[i].files) < movieMatchPrimaryPath(ret[j].files)
 	})
 	return ret, nil
+}
+
+func (r *queryResolver) movieMatchPlanScenesByID(ctx context.Context, sceneIDs []int) ([]movieMatchScenePlanRecord, error) {
+	var ret []movieMatchScenePlanRecord
+	if len(sceneIDs) == 0 {
+		return ret, nil
+	}
+
+	err := r.withReadTxn(ctx, func(ctx context.Context) error {
+		for _, sceneID := range sceneIDs {
+			scene, err := r.repository.Scene.Find(ctx, sceneID)
+			if err != nil {
+				return err
+			}
+			if scene == nil {
+				return fmt.Errorf("scene %d not found", sceneID)
+			}
+			files, groups, err := r.movieMatchLoadSceneRelationships(ctx, scene)
+			if err != nil {
+				return err
+			}
+			ret = append(ret, movieMatchScenePlanRecord{scene: scene, files: files, groups: groups})
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	sort.Slice(ret, func(i, j int) bool {
+		return movieMatchPrimaryPath(ret[i].files) < movieMatchPrimaryPath(ret[j].files)
+	})
+	return ret, nil
+}
+
+func movieMatchDeduplicateSceneRecords(records []movieMatchScenePlanRecord) []movieMatchScenePlanRecord {
+	ret := make([]movieMatchScenePlanRecord, 0, len(records))
+	seen := make(map[int]struct{})
+	for _, record := range records {
+		if record.scene == nil {
+			continue
+		}
+		if _, ok := seen[record.scene.ID]; ok {
+			continue
+		}
+		seen[record.scene.ID] = struct{}{}
+		ret = append(ret, record)
+	}
+	sort.Slice(ret, func(i, j int) bool {
+		return movieMatchPrimaryPath(ret[i].files) < movieMatchPrimaryPath(ret[j].files)
+	})
+	return ret
 }
 
 func (r *queryResolver) movieMatchLoadSceneRelationships(ctx context.Context, scene *models.Scene) ([]*models.VideoFile, []*models.Group, error) {
