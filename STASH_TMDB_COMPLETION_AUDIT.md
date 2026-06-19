@@ -7,7 +7,7 @@ This audit checks `STASH_TMDB_MOVIE_MATCHING_GOAL.md` against the current branch
 ## Current State
 
 - Branch: `jethac/media-library-improvements`
-- Latest pushed commit: `6e067781`
+- Latest pushed commit: `fc7ad88e`
 - Live Synology Stash endpoint: `http://192.168.1.112:9999/graphql`
 - Live deployed version: `custom-tmdb-movie-match`
 - Live deployed hash: `tmdb-movie-match-20260619`
