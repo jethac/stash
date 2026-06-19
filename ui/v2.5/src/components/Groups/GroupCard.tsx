@@ -73,9 +73,8 @@ export const GroupCard: React.FC<IProps> = PatchComponent(
   }) => {
     const location = useLocation();
     const displayTitle = getGroupDisplayTitle(group, titleLanguage);
-    const basePath = location.pathname.startsWith("/movies")
-      ? "/movies"
-      : "/groups";
+    const isMovieRoute = location.pathname.startsWith("/movies");
+    const basePath = isMovieRoute ? "/movies" : "/groups";
     const metadata = [
       group.date?.slice(0, 4),
       group.studio?.name,
@@ -206,7 +205,9 @@ export const GroupCard: React.FC<IProps> = PatchComponent(
 
     return (
       <GridCard
-        className={`group-card zoom-${zoomIndex}`}
+        className={`group-card ${
+          isMovieRoute ? "movie-card" : ""
+        } zoom-${zoomIndex}`}
         objectId={group.id}
         onMove={onMove}
         url={`${basePath}/${group.id}`}

@@ -879,6 +879,31 @@ func TestGroupQueryIsMissingLocalizedTitle(t *testing.T) {
 	})
 }
 
+func TestGroupQueryFilesFilter(t *testing.T) {
+	withRollbackTxn(func(ctx context.Context) error {
+		assert := assert.New(t)
+
+		filter := models.GroupFilterType{
+			FilesFilter: &models.FileFilterType{
+				ParentFolder: &models.HierarchicalMultiCriterionInput{
+					Value: []string{
+						strconv.Itoa(int(folderIDs[folderIdxWithSceneFiles])),
+					},
+					Modifier: models.CriterionModifierIncludes,
+				},
+			},
+		}
+
+		groups := queryGroups(ctx, t, &filter, nil)
+		ids := groupsToIDs(groups)
+
+		assert.Contains(ids, groupIDs[groupIdxWithScene])
+		assert.NotContains(ids, groupIDs[groupIdxWithStudio])
+
+		return nil
+	})
+}
+
 func TestGroupQueryStudio(t *testing.T) {
 	withTxn(func(ctx context.Context) error {
 		mqb := db.Group

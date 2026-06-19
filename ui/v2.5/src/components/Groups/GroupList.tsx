@@ -46,6 +46,7 @@ import { LoadedContent } from "../List/PagedList";
 import { SidebarStudiosFilter } from "../List/Filters/StudiosFilter";
 import { SidebarTagsFilter } from "../List/Filters/TagsFilter";
 import { SidebarRatingFilter } from "../List/Filters/RatingFilter";
+import { SidebarFolderFilter } from "../List/Filters/FolderFilter";
 import { Button, ButtonGroup, Form } from "react-bootstrap";
 import { NATIVE_TITLE_LANGUAGE } from "src/core/groups";
 import { IsMissingCriterion } from "src/models/list-filter/criteria/is-missing";
@@ -165,6 +166,12 @@ const SidebarContent: React.FC<{
           filterHook={filterHook}
         />
         <SidebarRatingFilter filter={filter} setFilter={setFilter} />
+        <SidebarFolderFilter
+          text={<FormattedMessage id="folder" />}
+          filter={filter}
+          setFilter={setFilter}
+          sectionID="folder"
+        />
       </GroupFilterSidebarSections>
 
       <div className="sidebar-footer">

@@ -419,6 +419,8 @@ input MovieFilterType {
   scenes_filter: SceneFilterType
   "Filter by related studios that meet this criteria"
   studios_filter: StudioFilterType
+  "Filter by related scene files that meet this criteria"
+  files_filter: FileFilterType
 }
 
 input GroupFilterType {
@@ -472,6 +474,8 @@ input GroupFilterType {
   scenes_filter: SceneFilterType
   "Filter by related studios that meet this criteria"
   studios_filter: StudioFilterType
+  "Filter by related scene files that meet this criteria"
+  files_filter: FileFilterType
 
   "Filter by custom fields"
   custom_fields: [CustomFieldCriterionInput!]

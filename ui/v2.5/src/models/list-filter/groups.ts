@@ -18,6 +18,7 @@ import {
   SubGroupsCriterionOption,
 } from "./criteria/groups";
 import { CustomFieldsCriterionOption } from "./criteria/custom-fields";
+import { FolderCriterionOption } from "./criteria/folder";
 
 const defaultSortBy = "name";
 
@@ -53,6 +54,7 @@ const criterionOptions = [
   StudiosCriterionOption,
   GroupIsMissingCriterionOption,
   createStringCriterionOption("url"),
+  FolderCriterionOption,
   createStringCriterionOption("name"),
   createStringCriterionOption("localized_title"),
   createStringCriterionOption("director"),

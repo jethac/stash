@@ -6,7 +6,7 @@
 - Use `jethac/stash` as the fork and `jethac/media-library-improvements` as the feature branch.
 - Keep changes sliced into reviewable commits.
 - Prefer existing Stash patterns for GraphQL, SQLite stores, React components, and generated UI types.
-- Run CPU-heavy checks locally or in GitHub Actions.
+- Run CPU-heavy checks locally, in GitHub Actions, or on the Ubicloud `hijinks-build-x64` amd64 build VM.
 
 ## Current Branch
 
@@ -90,7 +90,7 @@ Validation:
 
 ## Phase 4: Poster And Movie Cleanup Workflows
 
-Status: complete.
+Status: complete, with follow-up movie-list refinements in progress.
 
 Completed:
 
@@ -100,6 +100,8 @@ Completed:
 - Keep the existing front-image-backed poster storage, and label the group front-image edit action as poster management.
 - Verify `is_missing: "poster"` is already backed by the group front-image blob filter.
 - Keep cleanup shortcuts read-only; they only apply filters and do not perform bulk writes.
+- Make `/movies` render movie cards with cover-style poster image fitting while keeping `/groups` unchanged.
+- Add folder/directory filtering to the movie/group sidebar, backed by related scene-file folder joins in the group/movie filter.
 
 Remaining tasks:
 
@@ -149,6 +151,7 @@ Status: in progress.
 Tasks:
 
 - Add or reuse GitHub Actions workflow for Synology amd64 Docker image builds. (Complete)
+- Use the Ubicloud `hijinks-build-x64` VM for manual amd64 Docker builds when GitHub Actions is not the right place to wait. (Complete)
 - Publish to GitHub Container Registry under `ghcr.io/jethac/stash`. (Complete)
 - Tag images by branch SHA and optional semantic label. (Complete)
 - On Synology, back up the Stash config directory and database. (Complete for current deployment)
@@ -169,4 +172,4 @@ Synology rule:
 
 1. Run rendered browser smoke tests for `/movies`, movie detail, localized title switching/editing, performer incidence sorting, and scene playback.
 2. Decide whether to deploy the latest scripts-only image build; no Synology runtime redeploy is required for the completed metadata import.
-3. If GitHub Actions becomes too slow or unreliable, configure the Ubicloud `hijinks-build-x64` VM as the amd64 build host or self-hosted runner.
+3. Deploy the next custom image to Synology only after the Ubicloud/GHCR build is complete; do not build on the NAS.

@@ -29,6 +29,16 @@
     width: 100%;
   }
 
+  &.movie-card {
+    .thumbnail-section {
+      background-color: $black;
+    }
+
+    .group-card-image {
+      object-fit: cover;
+    }
+  }
+
   &__missing-poster {
     align-items: center;
     color: $text-muted;

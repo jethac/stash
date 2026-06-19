@@ -43,6 +43,8 @@ type GroupFilterType struct {
 	ScenesFilter *SceneFilterType `json:"scenes_filter"`
 	// Filter by related studios that meet this criteria
 	StudiosFilter *StudioFilterType `json:"studios_filter"`
+	// Filter by related scene files that meet this criteria
+	FilesFilter *FileFilterType `json:"files_filter"`
 	// Filter by created at
 	CreatedAt *TimestampCriterionInput `json:"created_at"`
 	// Filter by updated at

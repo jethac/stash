@@ -9,6 +9,8 @@ Fork Stash under `jethac`, implement movie-focused library improvements, and dep
 Stash is strong for scene-level browsing, but it is weak for a Plex-like movie library:
 
 - Movies/groups do not feel like first-class poster-driven library objects.
+- The movie list needs Plex-like poster cards rather than scene-thumbnail presentation.
+- Movie browsing needs directory/folder filtering so imported libraries can be narrowed by source folder.
 - Movie title handling is not good enough for libraries with English, Japanese, French, and native titles.
 - Performer browsing cannot be sorted by how often performers appear in the local movie library.
 - Posters, localized titles, and attribution cleanup require too much manual work outside the main movie workflow.
@@ -41,8 +43,9 @@ Secondary user: future self using the library repeatedly from the Stash web UI, 
 ### Movie Library
 
 - Provide a `/movies` route that uses Stash groups as movie records.
-- Show movies as poster-oriented cards.
+- Show movies as poster-oriented cards, with movie poster framing on `/movies` instead of thumbnail-style scene framing.
 - Prefer front cover/poster art over scene thumbnails.
+- Let the movie/group list sidebar filter by the directory containing related scene files.
 - Display useful movie metadata on cards, including date/year, duration, studio, scene count, performer count, and subgroup count where available.
 - Keep existing group URLs working.
 

@@ -107,7 +107,33 @@ func (qb *groupFilterHandler) criterionHandler() criterionHandler {
 			relatedRepo:    studioRepository.repository,
 			relatedHandler: &studioFilterHandler{groupFilter.StudiosFilter},
 		},
+
+		&relatedFilterHandler{
+			relatedIDCol: "files.id",
+			relatedRepo:  fileRepository.repository,
+			relatedHandler: &fileFilterHandler{
+				fileFilter: groupFilter.FilesFilter,
+				isRelated:  true,
+			},
+			joinFn: func(f *filterBuilder) {
+				qb.addFilesTable(f, joinTypeInner)
+				qb.addFoldersTable(f, joinTypeInner)
+			},
+			// don't use a subquery; join directly
+			directJoin: true,
+		},
 	}
+}
+
+func (qb *groupFilterHandler) addFilesTable(f *filterBuilder, joinType joinType) {
+	f.addJoin(joinType, groupsScenesTable, "", "groups_scenes.group_id = groups.id")
+	f.addJoin(joinType, scenesFilesTable, "", "scenes_files.scene_id = groups_scenes.scene_id")
+	f.addJoin(joinType, fileTable, "", "scenes_files.file_id = files.id")
+}
+
+func (qb *groupFilterHandler) addFoldersTable(f *filterBuilder, joinType joinType) {
+	qb.addFilesTable(f, joinType)
+	f.addJoin(joinType, folderTable, "", "files.parent_folder_id = folders.id")
 }
 
 func (qb *groupFilterHandler) missingCriterionHandler(isMissing *string) criterionHandlerFunc {
