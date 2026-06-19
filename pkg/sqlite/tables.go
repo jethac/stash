@@ -432,4 +432,9 @@ var (
 		table:    goqu.T(savedFilterTable),
 		idColumn: goqu.T(savedFilterTable).Col(idColumn),
 	}
+
+	localizedTitleTableMgr = &table{
+		table:    goqu.T(localizedTitleTable),
+		idColumn: goqu.T(localizedTitleTable).Col(idColumn),
+	}
 )
