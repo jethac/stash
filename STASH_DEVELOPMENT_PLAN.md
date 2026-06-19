@@ -102,6 +102,7 @@ Completed:
 - Keep cleanup shortcuts read-only; they only apply filters and do not perform bulk writes.
 - Make `/movies` render movie cards with cover-style poster image fitting while keeping `/groups` unchanged.
 - Add folder/directory filtering to the movie/group sidebar, backed by related scene-file folder joins in the group/movie filter.
+- Make movie/group folder selections recursive by default so selecting a library directory includes movies stored in child folders.
 
 Remaining tasks:
 
