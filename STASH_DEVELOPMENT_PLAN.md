@@ -70,13 +70,13 @@ Completed:
 - Add localized title fallback helper.
 - Add movie/group edit fields for English, Japanese, and French localized titles.
 - Add movie/group detail title-language selector.
+- Add localized title search/filter support.
+- Add a missing-localized-title filter for cleanup.
 
 Remaining tasks:
 
 - Decide whether to add a global title-language preference in settings.
 - Add localized title display to other movie detail surfaces, such as sticky/compressed headers if needed.
-- Add localized title search/filter support.
-- Add a missing-localized-title filter for cleanup.
 - Consider scene localized-title editing after movie/group workflow stabilizes.
 
 Validation:
@@ -144,7 +144,7 @@ Synology rule:
 
 ## Recommended Next Work
 
-1. Add localized-title search/filter support for movies/groups.
-2. Add missing-localized-title cleanup filtering.
-3. Add Docker image publishing through GitHub Actions.
+1. Add Docker image publishing through GitHub Actions.
+2. Add metadata import helpers for localized title backfills.
+3. Decide whether title language should become a global user setting.
 4. Deploy the custom image to Synology after CI artifacts exist.

@@ -5,6 +5,8 @@ type GroupFilterType struct {
 	Name     *StringCriterionInput `json:"name"`
 	Director *StringCriterionInput `json:"director"`
 	Synopsis *StringCriterionInput `json:"synopsis"`
+	// Filter by localized title
+	LocalizedTitle *StringCriterionInput `json:"localized_title"`
 	// Filter by duration (in seconds)
 	Duration *IntCriterionInput `json:"duration"`
 	// Filter by rating expressed as 1-100

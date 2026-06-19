@@ -134,6 +134,7 @@ export const GroupIsMissingCriterionOption = new IsMissingCriterionOption(
     "url",
     "rating",
     "studio",
+    "localized_title",
     "performers",
     "tags",
     "poster",

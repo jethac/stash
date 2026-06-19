@@ -806,6 +806,79 @@ func TestGroupQuery(t *testing.T) {
 	}
 }
 
+func TestGroupQueryLocalizedTitle(t *testing.T) {
+	withRollbackTxn(func(ctx context.Context) error {
+		assert := assert.New(t)
+		localizedTitle := models.LocalizedTitle{
+			ObjectType:   models.LocalizedTitleObjectTypeGroup,
+			ObjectID:     groupIDs[groupIdxWithScene],
+			LanguageCode: "ja",
+			Title:        "Localized Search Title",
+		}
+
+		if err := db.LocalizedTitle.Create(ctx, &localizedTitle); err != nil {
+			t.Fatalf("Error creating localized title: %s", err.Error())
+		}
+
+		q := "Localized Search"
+		findFilter := models.FindFilterType{
+			Q: &q,
+		}
+		groups := queryGroups(ctx, t, nil, &findFilter)
+
+		if assert.Len(groups, 1) {
+			assert.Equal(groupIDs[groupIdxWithScene], groups[0].ID)
+		}
+
+		titleCriterion := models.StringCriterionInput{
+			Value:    "Search Title",
+			Modifier: models.CriterionModifierIncludes,
+		}
+		filter := models.GroupFilterType{
+			LocalizedTitle: &titleCriterion,
+		}
+		groups = queryGroups(ctx, t, &filter, nil)
+
+		if assert.Len(groups, 1) {
+			assert.Equal(groupIDs[groupIdxWithScene], groups[0].ID)
+		}
+
+		titleCriterion.Value = "not present"
+		groups = queryGroups(ctx, t, &filter, nil)
+		assert.Empty(groups)
+
+		return nil
+	})
+}
+
+func TestGroupQueryIsMissingLocalizedTitle(t *testing.T) {
+	withRollbackTxn(func(ctx context.Context) error {
+		assert := assert.New(t)
+		localizedTitle := models.LocalizedTitle{
+			ObjectType:   models.LocalizedTitleObjectTypeGroup,
+			ObjectID:     groupIDs[groupIdxWithScene],
+			LanguageCode: "en",
+			Title:        "Has Localized Title",
+		}
+
+		if err := db.LocalizedTitle.Create(ctx, &localizedTitle); err != nil {
+			t.Fatalf("Error creating localized title: %s", err.Error())
+		}
+
+		isMissing := "localized_title"
+		filter := models.GroupFilterType{
+			IsMissing: &isMissing,
+		}
+		groups := queryGroups(ctx, t, &filter, nil)
+		ids := groupsToIDs(groups)
+
+		assert.NotContains(ids, groupIDs[groupIdxWithScene])
+		assert.Contains(ids, groupIDs[groupIdxWithStudio])
+
+		return nil
+	})
+}
+
 func TestGroupQueryStudio(t *testing.T) {
 	withTxn(func(ctx context.Context) error {
 		mqb := db.Group

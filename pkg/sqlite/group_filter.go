@@ -66,6 +66,7 @@ func (qb *groupFilterHandler) criterionHandler() criterionHandler {
 		stringCriterionHandler(groupFilter.Name, "groups.name"),
 		stringCriterionHandler(groupFilter.Director, "groups.director"),
 		stringCriterionHandler(groupFilter.Synopsis, "groups.description"),
+		stringCriterionHandler(groupFilter.LocalizedTitle, groupLocalizedTitleSearchSQL),
 		intCriterionHandler(groupFilter.Rating100, "groups.rating", nil),
 		floatIntCriterionHandler(groupFilter.Duration, "groups.duration", nil),
 		qb.missingCriterionHandler(groupFilter.IsMissing),
@@ -123,6 +124,8 @@ func (qb *groupFilterHandler) missingCriterionHandler(isMissing *string) criteri
 			case "url":
 				groupsURLsTableMgr.leftJoin(f, "", "groups.id")
 				f.addWhere("group_urls.url IS NULL")
+			case "localized_title":
+				f.addWhere(groupLocalizedTitleSearchSQL + " IS NULL")
 			case "studio":
 				f.addWhere("groups.studio_id IS NULL")
 			case "performers":
@@ -144,6 +147,12 @@ func (qb *groupFilterHandler) missingCriterionHandler(isMissing *string) criteri
 		}
 	}
 }
+
+var groupLocalizedTitleSearchSQL = fmt.Sprintf(
+	"(SELECT GROUP_CONCAT(title, ' ') FROM %s WHERE object_type = '%s' AND object_id = groups.id)",
+	localizedTitleTable,
+	models.LocalizedTitleObjectTypeGroup,
+)
 
 func (qb *groupFilterHandler) urlsCriterionHandler(url *models.StringCriterionInput) criterionHandlerFunc {
 	h := stringListCriterionHandlerBuilder{

@@ -441,7 +441,7 @@ func (qb *GroupStore) makeQuery(ctx context.Context, groupFilter *models.GroupFi
 	distinctIDs(&query, groupTable)
 
 	if q := findFilter.Q; q != nil && *q != "" {
-		searchColumns := []string{"groups.name", "groups.aliases"}
+		searchColumns := []string{"groups.name", "groups.aliases", groupLocalizedTitleSearchSQL}
 		query.parseQueryString(searchColumns, *q)
 	}
 

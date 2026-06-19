@@ -54,6 +54,7 @@ const criterionOptions = [
   GroupIsMissingCriterionOption,
   createStringCriterionOption("url"),
   createStringCriterionOption("name"),
+  createStringCriterionOption("localized_title"),
   createStringCriterionOption("director"),
   createStringCriterionOption("synopsis"),
   createDurationCriterionOption("duration"),

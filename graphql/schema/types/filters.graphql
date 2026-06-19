@@ -389,6 +389,8 @@ input MovieFilterType {
   name: StringCriterionInput
   director: StringCriterionInput
   synopsis: StringCriterionInput
+  "Filter by localized title"
+  localized_title: StringCriterionInput
 
   "Filter by duration (in seconds)"
   duration: IntCriterionInput
