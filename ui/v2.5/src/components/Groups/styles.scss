@@ -234,6 +234,24 @@ button.flip {
   }
 }
 
+.group-title-language-control {
+  align-items: center;
+  display: inline-flex;
+  gap: 0.5rem;
+  margin: 0 0 0.75rem;
+
+  label {
+    color: $text-muted;
+    font-size: 0.9rem;
+    margin: 0;
+    white-space: nowrap;
+  }
+
+  select {
+    min-width: 7rem;
+  }
+}
+
 .related-group-popover-button {
   .containing-group-count {
     display: inline-block;

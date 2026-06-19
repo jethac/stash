@@ -36,6 +36,28 @@ export const useGroupFilterHook = (
   };
 };
 
+export const NATIVE_TITLE_LANGUAGE = "native";
+
+type LocalizedTitleSource = {
+  name: string;
+  localized_titles?: Pick<GQL.LocalizedTitle, "language_code" | "title">[];
+};
+
+export function getGroupDisplayTitle(
+  group: LocalizedTitleSource,
+  languageCode: string
+) {
+  if (languageCode === NATIVE_TITLE_LANGUAGE) {
+    return group.name;
+  }
+
+  return (
+    group.localized_titles?.find(
+      (title) => title.language_code === languageCode
+    )?.title ?? group.name
+  );
+}
+
 export const scrapedGroupToCreateInput = (toCreate: GQL.ScrapedGroup) => {
   const input: GQL.GroupCreateInput = {
     name: toCreate.name ?? "",

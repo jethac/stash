@@ -19,6 +19,7 @@ import {
 import { RelatedGroupPopoverButton } from "./RelatedGroupPopover";
 import { OCounterButton } from "../Shared/CountButton";
 import TextUtils from "src/utils/text";
+import { getGroupDisplayTitle, NATIVE_TITLE_LANGUAGE } from "src/core/groups";
 
 const Description: React.FC<{
   sceneNumber?: number;
@@ -53,6 +54,7 @@ interface IProps {
   onSelectedChanged?: (selected: boolean, shiftKey: boolean) => void;
   fromGroupId?: string;
   onMove?: (srcIds: string[], targetId: string, after: boolean) => void;
+  titleLanguage?: string;
 }
 
 export const GroupCard: React.FC<IProps> = PatchComponent(
@@ -67,8 +69,10 @@ export const GroupCard: React.FC<IProps> = PatchComponent(
     onSelectedChanged,
     fromGroupId,
     onMove,
+    titleLanguage = NATIVE_TITLE_LANGUAGE,
   }) => {
     const location = useLocation();
+    const displayTitle = getGroupDisplayTitle(group, titleLanguage);
     const basePath = location.pathname.startsWith("/movies")
       ? "/movies"
       : "/groups";
@@ -170,7 +174,7 @@ export const GroupCard: React.FC<IProps> = PatchComponent(
           <img
             loading="lazy"
             className="group-card-image"
-            alt={group.name ?? ""}
+            alt={displayTitle}
             src={group.front_image_path}
           />
         );
@@ -207,7 +211,7 @@ export const GroupCard: React.FC<IProps> = PatchComponent(
         onMove={onMove}
         url={`${basePath}/${group.id}`}
         width={cardWidth}
-        title={group.name}
+        title={displayTitle}
         linkClassName="group-card-header"
         image={
           <>

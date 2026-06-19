@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import cloneDeep from "lodash-es/cloneDeep";
 import Mousetrap from "mousetrap";
@@ -46,7 +46,8 @@ import { LoadedContent } from "../List/PagedList";
 import { SidebarStudiosFilter } from "../List/Filters/StudiosFilter";
 import { SidebarTagsFilter } from "../List/Filters/TagsFilter";
 import { SidebarRatingFilter } from "../List/Filters/RatingFilter";
-import { Button } from "react-bootstrap";
+import { Button, Form } from "react-bootstrap";
+import { NATIVE_TITLE_LANGUAGE } from "src/core/groups";
 
 const GroupList: React.FC<{
   groups: GQL.ListGroupDataFragment[];
@@ -55,9 +56,18 @@ const GroupList: React.FC<{
   onSelectChange: (id: string, selected: boolean, shiftKey: boolean) => void;
   fromGroupId?: string;
   onMove?: (srcIds: string[], targetId: string, after: boolean) => void;
+  titleLanguage?: string;
 }> = PatchComponent(
   "GroupList",
-  ({ groups, filter, selectedIds, onSelectChange, fromGroupId, onMove }) => {
+  ({
+    groups,
+    filter,
+    selectedIds,
+    onSelectChange,
+    fromGroupId,
+    onMove,
+    titleLanguage,
+  }) => {
     if (groups.length === 0) {
       return null;
     }
@@ -71,6 +81,7 @@ const GroupList: React.FC<{
           onSelectChange={onSelectChange}
           fromGroupId={fromGroupId}
           onMove={onMove}
+          titleLanguage={titleLanguage}
         />
       );
     }
@@ -202,6 +213,7 @@ export const FilteredGroupList = PatchComponent(
   "FilteredGroupList",
   (props: IGroupList) => {
     const intl = useIntl();
+    const [titleLanguage, setTitleLanguage] = useState(NATIVE_TITLE_LANGUAGE);
 
     const searchFocus = useFocus();
 
@@ -257,6 +269,21 @@ export const FilteredGroupList = PatchComponent(
     } = listSelect;
 
     const { modal, showModal, closeModal } = modalState;
+
+    const titleLanguageOptions = useMemo(() => {
+      const languageCodes = new Set<string>();
+      items.forEach((group) => {
+        group.localized_titles.forEach((title) => {
+          languageCodes.add(title.language_code);
+        });
+      });
+
+      if (titleLanguage !== NATIVE_TITLE_LANGUAGE) {
+        languageCodes.add(titleLanguage);
+      }
+
+      return Array.from(languageCodes).sort((a, b) => a.localeCompare(b));
+    }, [items, titleLanguage]);
 
     // Utility hooks
     const { setPage, removeCriterion, clearAllCriteria } = useFilterOperations({
@@ -391,6 +418,30 @@ export const FilteredGroupList = PatchComponent(
       />
     );
 
+    const titleLanguageControl = titleLanguageOptions.length > 0 && (
+      <div className="group-title-language-control">
+        <label htmlFor="group-title-language">
+          <FormattedMessage id="title_language" />
+        </label>
+        <Form.Control
+          as="select"
+          id="group-title-language"
+          size="sm"
+          value={titleLanguage}
+          onChange={(e) => setTitleLanguage(e.currentTarget.value)}
+        >
+          <option value={NATIVE_TITLE_LANGUAGE}>
+            {intl.formatMessage({ id: "native_title" })}
+          </option>
+          {titleLanguageOptions.map((languageCode) => (
+            <option key={languageCode} value={languageCode}>
+              {languageCode.toUpperCase()}
+            </option>
+          ))}
+        </Form.Control>
+      </div>
+    );
+
     const content = (
       <>
         <FilteredListToolbar
@@ -404,6 +455,8 @@ export const FilteredGroupList = PatchComponent(
           view={view}
           zoomable
         />
+
+        {titleLanguageControl}
 
         <FilterTags
           criteria={filter.criteria}
@@ -435,6 +488,7 @@ export const FilteredGroupList = PatchComponent(
             onSelectChange={onSelectChange}
             fromGroupId={fromGroupId}
             onMove={canMove ? onMove : undefined}
+            titleLanguage={titleLanguage}
           />
         </LoadedContent>
 

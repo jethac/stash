@@ -1232,6 +1232,8 @@
   "group_scene_number": "Scene Number",
   "groups": "Groups",
   "movies": "Movies",
+  "title_language": "Title language",
+  "native_title": "Native",
   "hair_color": "Hair Colour",
   "handy_connection_status": {
     "connecting": "Connecting",

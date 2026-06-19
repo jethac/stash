@@ -14,13 +14,22 @@ interface IGroupCardGrid {
   onSelectChange: (id: string, selected: boolean, shiftKey: boolean) => void;
   fromGroupId?: string;
   onMove?: (srcIds: string[], targetId: string, after: boolean) => void;
+  titleLanguage?: string;
 }
 
 const zoomWidths = [210, 250, 300, 375];
 
 export const GroupCardGrid: React.FC<IGroupCardGrid> = PatchComponent(
   "GroupCardGrid",
-  ({ groups, selectedIds, zoomIndex, onSelectChange, fromGroupId, onMove }) => {
+  ({
+    groups,
+    selectedIds,
+    zoomIndex,
+    onSelectChange,
+    fromGroupId,
+    onMove,
+    titleLanguage,
+  }) => {
     const [componentRef, { width: containerWidth }] = useContainerDimensions();
     const cardWidth = useCardWidth(containerWidth, zoomIndex, zoomWidths);
 
@@ -39,6 +48,7 @@ export const GroupCardGrid: React.FC<IGroupCardGrid> = PatchComponent(
             }
             fromGroupId={fromGroupId}
             onMove={onMove}
+            titleLanguage={titleLanguage}
           />
         ))}
       </div>
