@@ -171,6 +171,117 @@ func TestMovieMatcherJSONReportIncludesApplyInputs(t *testing.T) {
 	}
 }
 
+func TestMovieMatcherApplyCreatesGroupTitlesAndSceneLink(t *testing.T) {
+	store := &fakeStore{
+		scenes: []sceneRecord{
+			{
+				ID:    "scene-1",
+				Title: "Some Movie",
+				Files: []sceneFile{{
+					Path:     "/data/Movies/Some Movie (2019) {tmdb-12345}/video.mkv",
+					Duration: 90 * 60,
+				}},
+			},
+		},
+	}
+	provider := fakeProvider{
+		candidates: []movieCandidate{
+			{
+				TMDBID:         12345,
+				IMDbID:         "tt1111111",
+				Title:          "Some Movie",
+				OriginalTitle:  "Original Movie",
+				ReleaseDate:    "2019-04-05",
+				RuntimeMinutes: 90,
+				Overview:       "Overview",
+				PosterURL:      "https://image.tmdb.org/t/p/original/poster.jpg",
+				BackdropURL:    "https://image.tmdb.org/t/p/original/backdrop.jpg",
+				Director:       "Director Name",
+				QueryMode:      "tmdb_id",
+				Translations: map[string]string{
+					"fr": "Film Exemple",
+					"ja": "サンプル映画",
+				},
+			},
+		},
+	}
+	matcher := movieMatcher{
+		cfg:      config{Roots: multiFlag{"/data/Movies"}, Apply: true, MinConfidence: 0.9},
+		store:    store,
+		provider: provider,
+		now:      fixedNow,
+	}
+
+	var out bytes.Buffer
+	summary, err := matcher.Run(context.Background(), &out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if summary.CreateGroup != 1 || summary.Title != 4 || summary.LinkScene != 1 || summary.Error != 0 {
+		t.Fatalf("summary = %#v\n%s", summary, out.String())
+	}
+	if len(store.createdGroups) != 1 {
+		t.Fatalf("createdGroups = %#v", store.createdGroups)
+	}
+	created := store.createdGroups[0]
+	for key, want := range map[string]any{
+		"name":        "Some Movie",
+		"date":        "2019-04-05",
+		"duration":    5400,
+		"director":    "Director Name",
+		"synopsis":    "Overview",
+		"front_image": "https://image.tmdb.org/t/p/original/poster.jpg",
+		"back_image":  "https://image.tmdb.org/t/p/original/backdrop.jpg",
+	} {
+		if created[key] != want {
+			t.Fatalf("created[%s] = %#v, want %#v; input=%#v", key, created[key], want, created)
+		}
+	}
+	urls, ok := created["urls"].([]string)
+	if !ok {
+		t.Fatalf("urls = %#v", created["urls"])
+	}
+	for _, want := range []string{"https://www.themoviedb.org/movie/12345", "https://www.imdb.com/title/tt1111111/"} {
+		if !containsString(urls, want) {
+			t.Fatalf("urls = %#v, missing %q", urls, want)
+		}
+	}
+	customFields, ok := created["custom_fields"].(map[string]any)
+	if !ok {
+		t.Fatalf("custom_fields = %#v", created["custom_fields"])
+	}
+	partial, ok := customFields["partial"].(map[string]any)
+	if !ok {
+		t.Fatalf("custom_fields partial = %#v", customFields)
+	}
+	for key, want := range map[string]any{
+		"movie_match_source":       "tmdb",
+		"movie_match_tmdb_id":      "12345",
+		"movie_match_confidence":   1.0,
+		"movie_match_applied_at":   "2026-06-19T00:00:00Z",
+		"movie_match_query_mode":   "tmdb_id",
+		"movie_match_imdb_id":      "tt1111111",
+		"movie_match_release_date": "2019-04-05",
+	} {
+		if partial[key] != want {
+			t.Fatalf("partial[%s] = %#v, want %#v; partial=%#v", key, partial[key], want, partial)
+		}
+	}
+	for _, want := range []string{
+		"created-1:en:Some Movie",
+		"created-1:fr:Film Exemple",
+		"created-1:ja:サンプル映画",
+		"created-1:original:Original Movie",
+	} {
+		if !containsString(store.upsertedTitleKeys, want) {
+			t.Fatalf("upsertedTitleKeys = %#v, missing %q", store.upsertedTitleKeys, want)
+		}
+	}
+	if !containsString(store.linkedSceneKeys, "scene-1:created-1") {
+		t.Fatalf("linkedSceneKeys = %#v", store.linkedSceneKeys)
+	}
+}
+
 func TestParseConfigAcceptsExplicitDryRunAndRejectsApplyConflict(t *testing.T) {
 	t.Setenv("TMDB_BEARER_TOKEN", "token")
 
@@ -270,13 +381,14 @@ func (f fakeProvider) FindCandidates(context.Context, parsedHint) ([]movieCandid
 }
 
 type fakeStore struct {
-	scenes          []sceneRecord
-	groupsByName    map[string]groupRecord
-	groupsByURL     map[string]groupRecord
-	titles          map[string]localizedTitle
-	createdGroups   []map[string]any
-	updatedGroups   []map[string]any
-	linkedSceneKeys []string
+	scenes            []sceneRecord
+	groupsByName      map[string]groupRecord
+	groupsByURL       map[string]groupRecord
+	titles            map[string]localizedTitle
+	createdGroups     []map[string]any
+	updatedGroups     []map[string]any
+	upsertedTitleKeys []string
+	linkedSceneKeys   []string
 }
 
 func (f *fakeStore) ListScenes(context.Context, []string, int) ([]sceneRecord, error) {
@@ -327,6 +439,7 @@ func (f *fakeStore) UpsertLocalizedTitle(_ context.Context, objectID string, tit
 		f.titles = make(map[string]localizedTitle)
 	}
 	f.titles[objectID+":"+title.LanguageCode] = localizedTitle{ID: "title-1", LanguageCode: title.LanguageCode, Title: title.Title, Source: &title.Source}
+	f.upsertedTitleKeys = append(f.upsertedTitleKeys, objectID+":"+title.LanguageCode+":"+title.Title)
 	return nil
 }
 
