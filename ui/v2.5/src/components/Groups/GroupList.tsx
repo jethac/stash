@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import cloneDeep from "lodash-es/cloneDeep";
 import Mousetrap from "mousetrap";
-import { useHistory } from "react-router-dom";
+import { useHistory, useLocation } from "react-router-dom";
 import { ListFilterModel } from "src/models/list-filter/filter";
 import { DisplayMode } from "src/models/list-filter/types";
 import * as GQL from "src/core/generated-graphql";
@@ -46,8 +46,9 @@ import { LoadedContent } from "../List/PagedList";
 import { SidebarStudiosFilter } from "../List/Filters/StudiosFilter";
 import { SidebarTagsFilter } from "../List/Filters/TagsFilter";
 import { SidebarRatingFilter } from "../List/Filters/RatingFilter";
-import { Button, Form } from "react-bootstrap";
+import { Button, ButtonGroup, Form } from "react-bootstrap";
 import { NATIVE_TITLE_LANGUAGE } from "src/core/groups";
+import { IsMissingCriterion } from "src/models/list-filter/criteria/is-missing";
 
 const GroupList: React.FC<{
   groups: GQL.ListGroupDataFragment[];
@@ -93,6 +94,25 @@ const GroupList: React.FC<{
 const GroupFilterSidebarSections = PatchContainerComponent(
   "FilteredGroupList.SidebarSections"
 );
+
+const movieCleanupFilters = [
+  {
+    value: "poster",
+    messageID: "movie_cleanup.missing_poster",
+  },
+  {
+    value: "localized_title",
+    messageID: "movie_cleanup.missing_localized_title",
+  },
+  {
+    value: "performers",
+    messageID: "movie_cleanup.missing_performers",
+  },
+  {
+    value: "studio",
+    messageID: "movie_cleanup.missing_studio",
+  },
+] as const;
 
 const SidebarContent: React.FC<{
   filter: ListFilterModel;
@@ -213,6 +233,7 @@ export const FilteredGroupList = PatchComponent(
   "FilteredGroupList",
   (props: IGroupList) => {
     const intl = useIntl();
+    const location = useLocation();
     const [titleLanguage, setTitleLanguage] = useState(NATIVE_TITLE_LANGUAGE);
 
     const searchFocus = useFocus();
@@ -323,6 +344,23 @@ export const FilteredGroupList = PatchComponent(
     });
 
     const viewRandom = useViewRandom(effectiveFilter, totalCount);
+    const isMovieRoute = location.pathname.startsWith("/movies");
+    const activeMissingCriterion = filter.criteriaFor("is_missing")[0] as
+      | IsMissingCriterion
+      | undefined;
+
+    function setMovieCleanupFilter(value: string) {
+      if (activeMissingCriterion?.value === value) {
+        setFilter(filter.removeCriterion("is_missing"));
+        return;
+      }
+
+      const criterion = filter.makeCriterion(
+        "is_missing"
+      ) as IsMissingCriterion;
+      criterion.value = value;
+      setFilter(filter.replaceCriteria("is_missing", [criterion]));
+    }
 
     function onExport(all: boolean) {
       showModal(
@@ -442,6 +480,29 @@ export const FilteredGroupList = PatchComponent(
       </div>
     );
 
+    const movieCleanupControl = isMovieRoute && (
+      <div className="movie-cleanup-control">
+        <span className="movie-cleanup-control__label">
+          {intl.formatMessage({ id: "movie_cleanup.title" })}
+        </span>
+        <ButtonGroup size="sm">
+          {movieCleanupFilters.map((cleanupFilter) => (
+            <Button
+              key={cleanupFilter.value}
+              variant={
+                activeMissingCriterion?.value === cleanupFilter.value
+                  ? "primary"
+                  : "secondary"
+              }
+              onClick={() => setMovieCleanupFilter(cleanupFilter.value)}
+            >
+              {intl.formatMessage({ id: cleanupFilter.messageID })}
+            </Button>
+          ))}
+        </ButtonGroup>
+      </div>
+    );
+
     const content = (
       <>
         <FilteredListToolbar
@@ -457,6 +518,8 @@ export const FilteredGroupList = PatchComponent(
         />
 
         {titleLanguageControl}
+
+        {movieCleanupControl}
 
         <FilterTags
           criteria={filter.criteria}

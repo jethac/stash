@@ -1311,6 +1311,13 @@
   "megabits_per_second": "{value} mbps",
   "metadata": "Metadata",
   "missing_poster": "No poster",
+  "movie_cleanup": {
+    "missing_localized_title": "Missing localized title",
+    "missing_performers": "Missing performers",
+    "missing_poster": "Missing poster",
+    "missing_studio": "Missing studio",
+    "title": "Cleanup"
+  },
   "name": "Name",
   "sort_name": "Sort Name",
   "new": "New",

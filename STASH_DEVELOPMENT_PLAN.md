@@ -89,14 +89,18 @@ Validation:
 
 ## Phase 4: Poster And Movie Cleanup Workflows
 
-Status: not started.
+Status: in progress.
 
-Tasks:
+Completed:
+
+- Add movie cleanup shortcuts for missing poster, missing localized title, missing performers, and missing studio.
+
+Remaining tasks:
 
 - Audit existing group front/back image upload and URL flows.
 - Decide whether dedicated poster controls are needed or whether existing image controls are enough.
 - Add filters for missing poster and ungrouped scenes if backend support is not already sufficient.
-- Add movie cleanup views for missing poster, missing title language, missing performers, and missing studio.
+- Add ungrouped-scenes cleanup if backend support is not already sufficient.
 - Ensure bulk actions are explicit and reversible where possible.
 
 Validation:
