@@ -40,6 +40,9 @@ func ParseHint(filePath, root string) Hint {
 
 func chooseSourceName(folder, fileBase, root string) string {
 	rootBase := path.Base(root)
+	if folder != "" && folder != "." && folder != "/" && strings.EqualFold(folder, rootBase) && providerTokenRe.MatchString(folder) {
+		return folder
+	}
 	if folder != "" && folder != "." && folder != "/" && !strings.EqualFold(folder, rootBase) {
 		if hasProviderOrYear(folder) || genericFileName(fileBase) || !hasProviderOrYear(fileBase) {
 			return folder

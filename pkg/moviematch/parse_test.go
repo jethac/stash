@@ -19,6 +19,23 @@ func TestParseHintPrefersMovieFolderAndProviderID(t *testing.T) {
 	}
 }
 
+func TestParseHintUsesMovieFolderWhenRootIsExactProviderFolder(t *testing.T) {
+	hint := ParseHint(
+		"/data/Porn (Anime)/1. Bible Black Origins {tmdb-79641}/Bible Black Origins 01.mp4",
+		"/data/Porn (Anime)/1. Bible Black Origins {tmdb-79641}",
+	)
+
+	if hint.SourceName != "1. Bible Black Origins {tmdb-79641}" {
+		t.Fatalf("SourceName = %q", hint.SourceName)
+	}
+	if hint.Title != "1 Bible Black Origins" {
+		t.Fatalf("Title = %q", hint.Title)
+	}
+	if hint.TMDBID != "79641" {
+		t.Fatalf("TMDBID = %q", hint.TMDBID)
+	}
+}
+
 func TestParseHintUsesStandaloneFileAndStripsQualityTokens(t *testing.T) {
 	hint := ParseHint("/data/Porn [EN]/Another.Movie.2020.{imdb-tt1234567}.1080p.BluRay.x264.mkv", "/data/Porn [EN]")
 
