@@ -704,7 +704,7 @@ query MovieMatchScenes($sceneFilter: SceneFilterType, $filter: FindFilterType) {
 		} `json:"findScenes"`
 	}
 	vars := map[string]any{
-		"sceneFilter": map[string]any{"path": map[string]any{"value": root, "modifier": "INCLUDES"}},
+		"sceneFilter": map[string]any{"path": map[string]any{"value": rootPathPattern(root), "modifier": "EQUALS"}},
 		"filter":      map[string]any{"page": page, "per_page": perPage, "sort": "path", "direction": "ASC"},
 	}
 	if err := c.do(ctx, query, vars, &out); err != nil {
@@ -1138,6 +1138,11 @@ func matchingRoot(target string, roots []string) string {
 		}
 	}
 	return best
+}
+
+func rootPathPattern(root string) string {
+	root = strings.TrimRight(moviematch.CleanSlashPath(root), "/")
+	return root + "/%"
 }
 
 func firstSceneGroup(scene sceneRecord) *groupRecord {

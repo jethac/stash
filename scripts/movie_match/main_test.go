@@ -46,6 +46,14 @@ func TestParseMovieHintUsesStandaloneFileAndStripsQualityTokens(t *testing.T) {
 	}
 }
 
+func TestRootPathPatternUsesPrefixWildcard(t *testing.T) {
+	got := rootPathPattern(`/data/Porn (Anime)/1. Bible Black Origins {tmdb-79641}/`)
+	want := "/data/Porn (Anime)/1. Bible Black Origins {tmdb-79641}/%"
+	if got != want {
+		t.Fatalf("pattern = %q, want %q", got, want)
+	}
+}
+
 func TestScoreCandidatePrefersExactTitleAndYear(t *testing.T) {
 	hint := parsedHint{Title: "Some Movie", Year: 2019}
 	candidates := []movieCandidate{

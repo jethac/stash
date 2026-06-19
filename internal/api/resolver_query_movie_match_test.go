@@ -60,6 +60,14 @@ func TestMovieMatchPlanOptionsValidatesConfidence(t *testing.T) {
 	}
 }
 
+func TestMovieMatchRootPathPatternUsesPrefixWildcard(t *testing.T) {
+	got := movieMatchRootPathPattern(`/data/Porn (Anime)/1. Bible Black Origins {tmdb-79641}/`)
+	want := "/data/Porn (Anime)/1. Bible Black Origins {tmdb-79641}/%"
+	if got != want {
+		t.Fatalf("pattern = %q, want %q", got, want)
+	}
+}
+
 func TestMovieMatchGroupInputConservativeUpdateKeepsCuratedFields(t *testing.T) {
 	duration := 3600
 	existing := &models.Group{

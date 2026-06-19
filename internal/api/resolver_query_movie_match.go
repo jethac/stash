@@ -153,8 +153,8 @@ func (r *queryResolver) movieMatchPlanScenes(ctx context.Context, roots []string
 				filter := &models.FindFilterType{Page: &page, PerPage: &perPage}
 				sceneFilter := &models.SceneFilterType{
 					Path: &models.StringCriterionInput{
-						Value:    root,
-						Modifier: models.CriterionModifierIncludes,
+						Value:    movieMatchRootPathPattern(root),
+						Modifier: models.CriterionModifierEquals,
 					},
 				}
 				result, err := r.repository.Scene.Query(ctx, models.SceneQueryOptions{
@@ -554,6 +554,11 @@ func movieMatchMatchingRoot(target string, roots []string) string {
 		}
 	}
 	return best
+}
+
+func movieMatchRootPathPattern(root string) string {
+	root = strings.TrimRight(moviematch.CleanSlashPath(root), "/")
+	return root + "/%"
 }
 
 func movieMatchFirstGroup(groups []*models.Group) *models.Group {
