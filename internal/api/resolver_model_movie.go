@@ -228,3 +228,14 @@ func (r *groupResolver) CustomFields(ctx context.Context, obj *models.Group) (ma
 
 	return m, nil
 }
+
+func (r *groupResolver) LocalizedTitles(ctx context.Context, obj *models.Group) (ret []*models.LocalizedTitle, err error) {
+	if err := r.withReadTxn(ctx, func(ctx context.Context) error {
+		ret, err = r.repository.LocalizedTitle.FindForObject(ctx, models.LocalizedTitleObjectTypeGroup, obj.ID)
+		return err
+	}); err != nil {
+		return nil, err
+	}
+
+	return ret, nil
+}

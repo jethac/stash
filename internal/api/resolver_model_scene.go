@@ -464,3 +464,14 @@ func (r *sceneResolver) CustomFields(ctx context.Context, obj *models.Scene) (ma
 
 	return m, nil
 }
+
+func (r *sceneResolver) LocalizedTitles(ctx context.Context, obj *models.Scene) (ret []*models.LocalizedTitle, err error) {
+	if err := r.withReadTxn(ctx, func(ctx context.Context) error {
+		ret, err = r.repository.LocalizedTitle.FindForObject(ctx, models.LocalizedTitleObjectTypeScene, obj.ID)
+		return err
+	}); err != nil {
+		return nil, err
+	}
+
+	return ret, nil
+}

@@ -1,6 +1,9 @@
 package models
 
 import (
+	"fmt"
+	"io"
+	"strconv"
 	"time"
 )
 
@@ -28,6 +31,27 @@ func (e LocalizedTitleObjectType) IsValid() bool {
 		return true
 	}
 	return false
+}
+
+func (e LocalizedTitleObjectType) String() string {
+	return string(e)
+}
+
+func (e *LocalizedTitleObjectType) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = LocalizedTitleObjectType(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid LocalizedTitleObjectType", str)
+	}
+	return nil
+}
+
+func (e LocalizedTitleObjectType) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
 }
 
 type LocalizedTitle struct {

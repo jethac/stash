@@ -149,6 +149,16 @@ func (qb *LocalizedTitleStore) Update(ctx context.Context, updatedObject *models
 	if err := qb.prepareForWrite(updatedObject, false); err != nil {
 		return err
 	}
+	if updatedObject.ID == 0 {
+		return fmt.Errorf("localized title id is required")
+	}
+	if updatedObject.CreatedAt.IsZero() {
+		existing, err := qb.find(ctx, updatedObject.ID)
+		if err != nil {
+			return err
+		}
+		updatedObject.CreatedAt = existing.CreatedAt
+	}
 
 	var r localizedTitleRow
 	r.fromLocalizedTitle(*updatedObject)

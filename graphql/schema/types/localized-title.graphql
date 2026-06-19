@@ -1,0 +1,37 @@
+enum LocalizedTitleObjectType {
+  SCENE
+  GROUP
+  PERFORMER
+  STUDIO
+  TAG
+  GALLERY
+  IMAGE
+}
+
+type LocalizedTitle {
+  id: ID!
+  object_type: LocalizedTitleObjectType!
+  object_id: ID!
+  language_code: String!
+  title: String!
+  source: String
+  created_at: Time!
+  updated_at: Time!
+}
+
+input LocalizedTitleCreateInput {
+  object_type: LocalizedTitleObjectType!
+  object_id: ID!
+  language_code: String!
+  title: String!
+  source: String
+}
+
+input LocalizedTitleUpdateInput {
+  id: ID!
+  object_type: LocalizedTitleObjectType!
+  object_id: ID!
+  language_code: String!
+  title: String!
+  source: String
+}

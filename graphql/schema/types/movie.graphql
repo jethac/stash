@@ -20,6 +20,7 @@ type Movie {
   back_image_path: String # Resolver
   scene_count(depth: Int): Int! # Resolver
   scenes: [Scene!]!
+  localized_titles: [LocalizedTitle!]!
 }
 
 input MovieCreateInput {

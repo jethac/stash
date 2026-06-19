@@ -80,6 +80,7 @@ type Scene {
   stash_ids: [StashID!]!
 
   custom_fields: Map!
+  localized_titles: [LocalizedTitle!]!
 
   "Return valid stream paths"
   sceneStreams: [SceneStreamEndpoint!]!
