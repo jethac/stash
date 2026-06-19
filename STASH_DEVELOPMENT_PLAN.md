@@ -107,17 +107,24 @@ Validation:
 
 ## Phase 5: Metadata Import Helpers
 
-Status: not started.
+Status: in progress.
 
-Tasks:
+Completed:
 
-- Define import format for localized title backfills.
-- Add an admin script or plugin workflow to upsert localized titles from CSV/JSON.
-- Add dry-run mode and conflict reporting.
-- Optionally support Plex database derived titles where source data is reliable.
+- Define CSV/JSON import format for localized title backfills.
+- Add `scripts/localized_titles_backfill`, a workstation-run GraphQL helper for localized title imports.
+- Add dry-run mode, duplicate detection, and conflict reporting.
+- Require `--apply` for writes and `--overwrite` before replacing existing different values.
+
+Remaining tasks:
+
+- Optionally support Plex database derived title exports where source data is reliable.
+- Run a dry-run against production Stash with a real localized-title export.
+- Back up production Stash config/database before any apply run.
 
 Validation:
 
+- `go test ./scripts/localized_titles_backfill`
 - Dry-run against a copied database or fixture.
 - Upsert test with duplicate language/object pairs.
 - Backup and restore drill before running on production data.
@@ -146,5 +153,5 @@ Synology rule:
 
 1. Wait for the GHCR workflow to publish `ghcr.io/jethac/stash:media-library-improvements`.
 2. Deploy the custom image to Synology after CI artifacts exist.
-3. Add metadata import helpers for localized title backfills.
+3. Dry-run `scripts/localized_titles_backfill` against a real export.
 4. Decide whether title language should become a global user setting.
