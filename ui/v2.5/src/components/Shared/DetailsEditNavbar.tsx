@@ -23,6 +23,10 @@ interface IProps {
   onBackImageChangeURL?: (url: string) => void;
   onClearImage?: () => void;
   onClearBackImage?: () => void;
+  imageText?: string;
+  backImageText?: string;
+  clearImageText?: string;
+  clearBackImageText?: string;
   acceptSVG?: boolean;
   customButtons?: JSX.Element;
   classNames?: string;
@@ -106,7 +110,10 @@ export const DetailsEditNavbar: React.FC<IProps> = (props: IProps) => {
     return (
       <ImageInput
         isEditing={props.isEditing}
-        text={intl.formatMessage({ id: "actions.set_back_image" })}
+        text={
+          props.backImageText ??
+          intl.formatMessage({ id: "actions.set_back_image" })
+        }
         onImageChange={props.onBackImageChange}
         onImageURL={props.onBackImageChangeURL}
       />
@@ -171,9 +178,10 @@ export const DetailsEditNavbar: React.FC<IProps> = (props: IProps) => {
       <ImageInput
         isEditing={props.isEditing}
         text={
-          props.onBackImageChange
+          props.imageText ??
+          (props.onBackImageChange
             ? intl.formatMessage({ id: "actions.set_front_image" })
-            : undefined
+            : undefined)
         }
         onImageChange={props.onImageChange}
         onImageURL={props.onImageChangeURL}
@@ -186,9 +194,10 @@ export const DetailsEditNavbar: React.FC<IProps> = (props: IProps) => {
             variant="danger"
             onClick={() => props.onClearImage!()}
           >
-            {props.onClearBackImage
-              ? intl.formatMessage({ id: "actions.clear_front_image" })
-              : intl.formatMessage({ id: "actions.clear_image" })}
+            {props.clearImageText ??
+              (props.onClearBackImage
+                ? intl.formatMessage({ id: "actions.clear_front_image" })
+                : intl.formatMessage({ id: "actions.clear_image" }))}
           </Button>
         </div>
       ) : null}
@@ -200,7 +209,8 @@ export const DetailsEditNavbar: React.FC<IProps> = (props: IProps) => {
             variant="danger"
             onClick={() => props.onClearBackImage!()}
           >
-            {intl.formatMessage({ id: "actions.clear_back_image" })}
+            {props.clearBackImageText ??
+              intl.formatMessage({ id: "actions.clear_back_image" })}
           </Button>
         </div>
       ) : null}

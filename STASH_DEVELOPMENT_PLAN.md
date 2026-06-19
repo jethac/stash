@@ -95,13 +95,14 @@ Completed:
 
 - Add movie cleanup shortcuts for missing poster, missing localized title, missing performers, and missing studio.
 - Add scene cleanup shortcuts for ungrouped scenes, missing performers, and missing studio.
+- Audit existing group front/back image upload and URL flows.
+- Keep the existing front-image-backed poster storage, and label the group front-image edit action as poster management.
+- Verify `is_missing: "poster"` is already backed by the group front-image blob filter.
+- Keep cleanup shortcuts read-only; they only apply filters and do not perform bulk writes.
 
 Remaining tasks:
 
-- Audit existing group front/back image upload and URL flows.
-- Decide whether dedicated poster controls are needed or whether existing image controls are enough.
-- Add filters for missing poster if backend support is not already sufficient.
-- Ensure bulk actions are explicit and reversible where possible.
+- None.
 
 Validation:
 

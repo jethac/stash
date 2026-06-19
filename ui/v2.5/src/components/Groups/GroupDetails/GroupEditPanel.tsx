@@ -479,7 +479,7 @@ export const GroupEditPanel: React.FC<IGroupEditPanel> = ({
         onHide={() => setIsImageAlertOpen(false)}
       >
         <BSModal.Body>
-          <p>Select image to set</p>
+          <p>{intl.formatMessage({ id: "dialogs.select_group_image" })}</p>
         </BSModal.Body>
         <BSModal.Footer>
           <div>
@@ -495,13 +495,13 @@ export const GroupEditPanel: React.FC<IGroupEditPanel> = ({
               className="mr-2"
               onClick={() => setImageFromClipboard(false)}
             >
-              Back Image
+              {intl.formatMessage({ id: "actions.set_back_image_plain" })}
             </Button>
             <Button
               className="mr-2"
               onClick={() => setImageFromClipboard(true)}
             >
-              Front Image
+              {intl.formatMessage({ id: "poster" })}
             </Button>
           </div>
         </BSModal.Footer>
@@ -650,6 +650,8 @@ export const GroupEditPanel: React.FC<IGroupEditPanel> = ({
         onImageChange={onFrontImageChange}
         onImageChangeURL={onFrontImageLoad}
         onClearImage={() => onFrontImageLoad(null)}
+        imageText={intl.formatMessage({ id: "actions.set_poster" })}
+        clearImageText={intl.formatMessage({ id: "actions.clear_poster" })}
         onBackImageChange={onBackImageChange}
         onBackImageChangeURL={onBackImageLoad}
         onClearBackImage={() => onBackImageLoad(null)}
