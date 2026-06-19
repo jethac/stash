@@ -2155,7 +2155,7 @@ func TestPerformerQueryGroupCount(t *testing.T) {
 }
 
 func verifyPerformersGroupCount(t *testing.T, groupCountCriterion models.IntCriterionInput) {
-	withTxn(func(ctx context.Context) error {
+	if err := withRollbackTxn(func(ctx context.Context) error {
 		if err := ensurePerformerGroupCountFixture(ctx); err != nil {
 			return err
 		}
@@ -2176,7 +2176,9 @@ func verifyPerformersGroupCount(t *testing.T, groupCountCriterion models.IntCrit
 		}
 
 		return nil
-	})
+	}); err != nil {
+		t.Error(err)
+	}
 }
 
 func ensurePerformerGroupCountFixture(ctx context.Context) error {
@@ -2620,7 +2622,7 @@ func TestPerformerQuerySortGroupsCount(t *testing.T) {
 		Direction: &direction,
 	}
 
-	withTxn(func(ctx context.Context) error {
+	if err := withRollbackTxn(func(ctx context.Context) error {
 		if err := ensurePerformerGroupCountFixture(ctx); err != nil {
 			return err
 		}
@@ -2644,7 +2646,9 @@ func TestPerformerQuerySortGroupsCount(t *testing.T) {
 		verifyPerformersSortedByGroupCount(ctx, t, performers, true)
 
 		return nil
-	})
+	}); err != nil {
+		t.Error(err)
+	}
 }
 
 func verifyPerformersSortedByGroupCount(ctx context.Context, t *testing.T, performers []*models.Performer, ascending bool) {
