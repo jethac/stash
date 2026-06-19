@@ -1,5 +1,6 @@
 import React, { useMemo } from "react";
 import { Button, ButtonGroup } from "react-bootstrap";
+import { useLocation } from "react-router-dom";
 import * as GQL from "src/core/generated-graphql";
 import { PatchComponent } from "src/patch";
 import { GridCard } from "../Shared/GridCard/GridCard";
@@ -61,6 +62,11 @@ export const GroupCard: React.FC<IProps> = PatchComponent(
     fromGroupId,
     onMove,
   }) => {
+    const location = useLocation();
+    const basePath = location.pathname.startsWith("/movies")
+      ? "/movies"
+      : "/groups";
+
     const groupDescription = useMemo(() => {
       if (!fromGroupId) {
         return undefined;
@@ -152,7 +158,7 @@ export const GroupCard: React.FC<IProps> = PatchComponent(
         className={`group-card zoom-${zoomIndex}`}
         objectId={group.id}
         onMove={onMove}
-        url={`/groups/${group.id}`}
+        url={`${basePath}/${group.id}`}
         width={cardWidth}
         title={group.name}
         linkClassName="group-card-header"

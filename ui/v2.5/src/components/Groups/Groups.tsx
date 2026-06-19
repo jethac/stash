@@ -12,14 +12,21 @@ const Groups: React.FC = () => {
 };
 
 const GroupRoutes: React.FC = () => {
-  const titleProps = useTitleProps({ id: "groups" });
+  const titleProps = useTitleProps({ id: "movies" });
   return (
     <>
       <Helmet {...titleProps} />
       <Switch>
-        <Route exact path="/groups" component={Groups} />
-        <Route exact path="/groups/new" component={GroupCreate} />
-        <Route path="/groups/:id/:tab?" component={Group} />
+        <Route exact path={["/groups", "/movies"]} component={Groups} />
+        <Route
+          exact
+          path={["/groups/new", "/movies/new"]}
+          component={GroupCreate}
+        />
+        <Route
+          path={["/groups/:id/:tab?", "/movies/:id/:tab?"]}
+          component={Group}
+        />
       </Switch>
     </>
   );
