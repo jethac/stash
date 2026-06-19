@@ -29,6 +29,11 @@ Date checked: 2026-06-19
 - Live GraphQL introspection confirmed `movieMatchPlan`.
 - A live non-mutating `movieMatchPlan` request reached the resolver and failed closed with:
   - `missing TMDB token; set TMDB_BEARER_TOKEN on the server or pass tmdb_token`
+- A live non-mutating `movieMatchPlan` request with an intentionally invalid token scanned `/data`, parsed a scene hint, and reached TMDB:
+  - action: `error`
+  - path: `/data/Porn (3DCG)/Clips/1618723246633.webm`
+  - parsed title: `Clips`
+  - TMDB response: `http 401`
 - Temporary image tar files were removed after `docker load`.
 
 ## Required Before TMDB Live Test
