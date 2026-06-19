@@ -124,13 +124,13 @@ Validation:
 
 ## Phase 6: Docker Image And Synology Deployment
 
-Status: planned.
+Status: in progress.
 
 Tasks:
 
-- Add or reuse GitHub Actions workflow for multi-platform Docker image builds.
-- Publish to GitHub Container Registry under `ghcr.io/jethac/stash`.
-- Tag images by branch SHA and optional semantic label.
+- Add or reuse GitHub Actions workflow for multi-platform Docker image builds. (Complete)
+- Publish to GitHub Container Registry under `ghcr.io/jethac/stash`. (Complete)
+- Tag images by branch SHA and optional semantic label. (Complete)
 - On Synology, back up the Stash config directory and database.
 - Pull the finished image on Synology.
 - Update the Stash container image reference.
@@ -144,7 +144,7 @@ Synology rule:
 
 ## Recommended Next Work
 
-1. Add Docker image publishing through GitHub Actions.
-2. Add metadata import helpers for localized title backfills.
-3. Decide whether title language should become a global user setting.
-4. Deploy the custom image to Synology after CI artifacts exist.
+1. Wait for the GHCR workflow to publish `ghcr.io/jethac/stash:media-library-improvements`.
+2. Deploy the custom image to Synology after CI artifacts exist.
+3. Add metadata import helpers for localized title backfills.
+4. Decide whether title language should become a global user setting.
