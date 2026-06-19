@@ -7,12 +7,12 @@ This audit checks `STASH_TMDB_MOVIE_MATCHING_GOAL.md` against the current branch
 ## Current State
 
 - Branch: `jethac/media-library-improvements`
-- Latest pushed commit: `fc7ad88e`
+- Latest pushed commit: `3cc15cc1`
 - Live Synology Stash endpoint: `http://192.168.1.112:9999/graphql`
-- Live deployed version: `custom-tmdb-movie-match`
-- Live deployed hash: `tmdb-movie-match-20260619`
+- Live deployed version: `custom-tmdb-movie-match-hintfix`
+- Live deployed hash: `3cc15cc1-hintfix`
 - Live GraphQL schema exposes `movieMatchPlan`.
-- No valid TMDB bearer token is available in this shell or deployed container.
+- Valid TMDB bearer token is configured outside git in `/volume1/docker/stash/.env` and loaded through the Stash compose `env_file`.
 
 ## Requirement Audit
 
@@ -20,7 +20,7 @@ This audit checks `STASH_TMDB_MOVIE_MATCHING_GOAL.md` against the current branch
 | --- | --- | --- |
 | Parse Plex-style `{tmdb-*}`, `{imdb-tt*}`, and `{edition-*}` tokens. | `pkg/moviematch/parse.go`; parser fixtures in `pkg/moviematch/parse_test.go`; CLI parser tests in `scripts/movie_match/main_test.go`. | Proven locally. |
 | Parse common movie path patterns and strip quality/source tokens. | `TestParseHintRepresentativePathFixtures`, `TestParseHintUsesStandaloneFileAndStripsQualityTokens`, and CLI equivalents. | Proven locally. |
-| Prefer folder-level identity over file basename. | Parser implementation and tests using movie folders with child video files. | Proven locally for representative fixtures. |
+| Prefer folder-level identity over file basename. | Parser implementation and tests using movie folders with child video files, including exact-root provider folders. | Proven locally and in live dry-run. |
 | Query TMDB by TMDB ID without title search. | `TestTMDBClientFindCandidatesByTMDBIDSkipsSearch`. | Proven locally with fake TMDB server. |
 | Query TMDB by IMDb external ID. | `TestTMDBClientFindCandidatesByIMDbIDUsesExternalLookup`. | Proven locally with fake TMDB server. |
 | Query TMDB by title and year. | `TestTMDBClientFindCandidatesByTitleAndYearUsesSearch`. | Proven locally with fake TMDB server. |
@@ -38,9 +38,9 @@ This audit checks `STASH_TMDB_MOVIE_MATCHING_GOAL.md` against the current branch
 | Keep scene-level performer/tag metadata separate. | Matcher only mutates groups, localized titles, and scene group links; no performer/tag mutation path is present. | Proven by code inspection. |
 | Provide workstation/CI helper. | `scripts/movie_match` and README. | Implemented and tested. |
 | Provide in-app review UI. | `/movies/match` route, `MovieMatchReview.tsx`, GraphQL query, field-level controls, skip/apply controls. | Implemented and type/lint checked. |
-| Deploy to Synology. | `STASH_TMDB_LIVE_VALIDATION.md`; live version/schema checks. | Proven for deployed image `tmdb-movie-match-20260619`. |
-| Native live dry-run with real TMDB data. | Live resolver accepts token override and reaches TMDB with invalid token; valid token is unavailable. | Not proven. |
-| Apply one reviewed high-confidence live match and verify `/movies` render. | Requires a valid TMDB token and selecting a real match. | Not proven. |
+| Deploy to Synology. | `STASH_TMDB_LIVE_VALIDATION.md`; live version/schema checks. | Proven for deployed image `tmdb-movie-match-hintfix-20260619`. |
+| Native live dry-run with real TMDB data. | Live dry-run against `/data/Porn (Anime)/1. Bible Black Origins {tmdb-79641}` read the env token, scanned only scene IDs `640` and `641`, parsed the folder TMDB ID, and returned TMDB data. | Proven, with bad source metadata found. |
+| Apply one reviewed high-confidence live match and verify `/movies` render. | The dry-run candidate was rejected because folder TMDB ID `79641` resolves to an unrelated title. | Not proven. |
 
 ## Validation Commands Run
 
@@ -53,20 +53,37 @@ npm exec -- biome lint src/components/Groups/MovieMatchReview.tsx src/components
 npm exec -- stylelint "src/components/Groups/styles.scss"
 ```
 
+Additional validation after the root-filter and exact-root provider-folder fixes:
+
+```powershell
+go test ./pkg/moviematch ./scripts/movie_match ./scripts/...
+docker run --rm -v gomodcache:/go/pkg/mod -v gocache:/root/.cache/go-build -v "${PWD}:/workspace" -w /workspace golang:1.25 bash -lc 'export PATH=/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin; go test ./internal/api -run MovieMatch'
+```
+
 ## Live Smoke Evidence
 
 - Live schema check: `movieMatchPlan` is present.
-- Live no-token request fails closed before network access:
+- Historical no-token request failed closed before network access:
   - `missing TMDB token; set TMDB_BEARER_TOKEN on the server or pass tmdb_token`
-- Live invalid-token request scans `/data`, parses the first scene path, calls TMDB, and returns the expected TMDB 401 inside a dry-run error item.
+- Historical invalid-token request scanned `/data`, parsed the first scene path, called TMDB, and returned the expected TMDB 401 inside a dry-run error item.
+- Current live schema/version check:
+  - version: `custom-tmdb-movie-match-hintfix`
+  - hash: `3cc15cc1-hintfix`
+  - `movieMatchPlan` present.
+- Current live real-token dry-run:
+  - root: `/data/Porn (Anime)/1. Bible Black Origins {tmdb-79641}`
+  - scanned only scene IDs `640` and `641`;
+  - parsed source name `1. Bible Black Origins {tmdb-79641}`;
+  - parsed TMDB ID `79641`;
+  - returned a TMDB candidate with score `1.0` via `tmdb_id`;
+  - apply was skipped because the resolved title did not match the folder.
 
 ## Remaining Work Before Completion
 
-1. Provide a valid TMDB v3 read-access bearer token through the `/movies/match` override field or Synology container environment.
-2. Run a native dry-run against a small root, ideally a folder with `{tmdb-*}` or `{imdb-tt*}` in the path.
-3. Confirm the review table shows parsed hints, chosen candidate, alternates if present, confidence, and planned group/title/link actions.
-4. Apply one reviewed high-confidence match.
-5. Verify the resulting Stash group has TMDB/IMDb URLs, poster/backdrop images where selected, metadata fields, `movie_match_*` custom fields, localized titles, and a scene group link.
-6. Verify `/movies` renders the resulting poster/title/year/localized title behavior.
+1. Correct inaccurate folder provider IDs, or choose a different small folder with a known-good `{tmdb-*}` or `{imdb-tt*}` token.
+2. Confirm the review table shows parsed hints, chosen candidate, alternates if present, confidence, and planned group/title/link actions.
+3. Apply one reviewed high-confidence match.
+4. Verify the resulting Stash group has TMDB/IMDb URLs, poster/backdrop images where selected, metadata fields, `movie_match_*` custom fields, localized titles, and a scene group link.
+5. Verify `/movies` renders the resulting poster/title/year/localized title behavior.
 
-Until those live-token checks pass, the goal remains incomplete.
+Until a correct live match is applied and `/movies` is verified, the goal remains incomplete.

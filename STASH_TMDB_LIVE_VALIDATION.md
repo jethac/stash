@@ -5,40 +5,50 @@ Date checked: 2026-06-19
 ## Current Synology State
 
 - Stash is reachable at `http://192.168.1.112:9999/graphql`.
-- Reported version is `custom-tmdb-movie-match`.
-- Reported hash is `tmdb-movie-match-20260619`.
+- Reported version is `custom-tmdb-movie-match-hintfix`.
+- Reported hash is `3cc15cc1-hintfix`.
 - The deployed GraphQL schema exposes `movieMatchPlan`.
 - Current compose file is `/volume1/docker/stash/docker-compose.yml`.
-- Current image in that compose file is `ghcr.io/jethac/stash:tmdb-movie-match-20260619`.
+- Current image in that compose file is `ghcr.io/jethac/stash:tmdb-movie-match-hintfix-20260619`.
 - Current media mount is `/volume1/Media/Library/Ero:/data:ro`.
 - Current Stash config mount is `/volume1/docker/stash/config:/root/.stash`.
 - `jethac` can SSH to the NAS and read the compose file, but Docker operations require sudo.
 - Compose backup before this deployment: `/volume1/docker/stash/docker-compose.yml.bak-tmdb-20260619-2240`.
+- Additional compose backups before follow-up deployments:
+  - `/volume1/docker/stash/docker-compose.yml.bak-tmdb-env-20260619`
+  - `/volume1/docker/stash/docker-compose.yml.bak-rootfix-20260619`
+  - `/volume1/docker/stash/docker-compose.yml.bak-hintfix-20260619`
+- TMDB bearer token is stored outside git in `/volume1/docker/stash/.env` with file mode `600`, and compose reads it through `env_file`.
 
 ## Deployment Notes
 
 - Built locally with Docker Desktop, not on the Synology CPU.
-- Local image tag: `ghcr.io/jethac/stash:tmdb-movie-match-20260619`.
+- Local image tag: `ghcr.io/jethac/stash:tmdb-movie-match-hintfix-20260619`.
 - Image version check passed:
-  - version: `custom-tmdb-movie-match`
-  - hash: `tmdb-movie-match-20260619`
-  - build time: `2026-06-19 13:35:25`
+  - version: `custom-tmdb-movie-match-hintfix`
+  - hash: `3cc15cc1-hintfix`
+  - build time: `2026-06-19 14:18:06`
 - Local disposable-container GraphQL introspection confirmed `movieMatchPlan`.
 - GHCR push failed because the available GitHub token does not have the required package-write scope.
 - Deployed by `docker save`, SSH byte-stream copy, `sudo docker load`, compose image update, and `sudo docker compose up -d`.
 - Live GraphQL introspection confirmed `movieMatchPlan`.
-- A live non-mutating `movieMatchPlan` request reached the resolver and failed closed with:
+- Before token configuration, a live non-mutating `movieMatchPlan` request reached the resolver and failed closed with:
   - `missing TMDB token; set TMDB_BEARER_TOKEN on the server or pass tmdb_token`
-- A live non-mutating `movieMatchPlan` request with an intentionally invalid token scanned `/data`, parsed a scene hint, and reached TMDB:
+- Before token configuration, a live non-mutating `movieMatchPlan` request with an intentionally invalid token scanned `/data`, parsed a scene hint, and reached TMDB:
   - action: `error`
   - path: `/data/Porn (3DCG)/Clips/1618723246633.webm`
   - parsed title: `Clips`
   - TMDB response: `http 401`
-- Temporary image tar files were removed after `docker load`.
+- A live dry-run against `/data/Porn (Anime)/1. Bible Black Origins {tmdb-79641}` confirmed:
+  - only scene IDs `640` and `641` were scanned, proving strict root prefix filtering for folders with spaces;
+  - the parser used source name `1. Bible Black Origins {tmdb-79641}`;
+  - the deployed container read the TMDB token from `/volume1/docker/stash/.env`;
+  - TMDB ID `79641` resolved successfully, proving API access.
+- No live apply was performed because TMDB ID `79641` resolves to `Bogyó és Babóca 2. - 13 ÚJ mese`, which does not match `Bible Black Origins`.
 
-## Required Before TMDB Live Test
+## Required Before Live Apply
 
-1. Add `TMDB_BEARER_TOKEN` or `TMDB_API_READ_ACCESS_TOKEN` to the `environment` block, or use the `/movies/match` token override field for an ad hoc run.
+1. Correct inaccurate folder provider IDs, or choose a different small folder with a known-good `{tmdb-*}` or `{imdb-tt*}` token.
 2. Run a native dry-run plan from `/movies/match` or GraphQL.
 3. Review a high-confidence candidate before applying any group/scene changes.
 
@@ -102,4 +112,5 @@ Suggested variables:
 
 ## Current Blockers
 
-- No TMDB token is available in this local shell, so the actual TMDB lookup dry-run has not been validated yet.
+- The TMDB token is configured and live dry-run works.
+- The tested folder had an incorrect TMDB ID, so a reviewed live apply was intentionally skipped.
