@@ -25,6 +25,8 @@ type config struct {
 	InputPath     string
 	Format        string
 	DefaultSource string
+	PathFrom      string
+	PathTo        string
 	Apply         bool
 	Overwrite     bool
 	Timeout       time.Duration
@@ -45,6 +47,8 @@ type groupRecord struct {
 	TagIDs          []string
 	FrontImage      string
 	BackImage       string
+	ScenePath       string
+	SceneIndex      string
 	Source          string
 	LocalizedTitles []localizedTitleRecord
 }
@@ -66,21 +70,33 @@ type existingTitle struct {
 	Source *string `json:"source"`
 }
 
+type sceneRef struct {
+	ID     string
+	Title  string
+	Path   string
+	Groups []groupRef
+}
+
 type action string
 
 const (
-	actionWouldCreateGroup  action = "would_create_group"
-	actionCreateGroup       action = "create_group"
-	actionExistingGroup     action = "existing_group"
-	actionWouldCreateTitle  action = "would_create_title"
-	actionCreateTitle       action = "create_title"
-	actionWouldUpdateTitle  action = "would_update_title"
-	actionUpdateTitle       action = "update_title"
-	actionUnchangedTitle    action = "unchanged_title"
-	actionConflictTitle     action = "conflict_title"
-	actionDuplicate         action = "duplicate"
-	actionDuplicateConflict action = "duplicate_conflict"
-	actionError             action = "error"
+	actionWouldCreateGroup   action = "would_create_group"
+	actionCreateGroup        action = "create_group"
+	actionExistingGroup      action = "existing_group"
+	actionWouldCreateTitle   action = "would_create_title"
+	actionCreateTitle        action = "create_title"
+	actionWouldUpdateTitle   action = "would_update_title"
+	actionUpdateTitle        action = "update_title"
+	actionUnchangedTitle     action = "unchanged_title"
+	actionConflictTitle      action = "conflict_title"
+	actionWouldLinkScene     action = "would_link_scene"
+	actionLinkScene          action = "link_scene"
+	actionSceneAlreadyLinked action = "scene_already_linked"
+	actionMissingScene       action = "missing_scene"
+	actionAmbiguousScene     action = "ambiguous_scene"
+	actionDuplicate          action = "duplicate"
+	actionDuplicateConflict  action = "duplicate_conflict"
+	actionError              action = "error"
 )
 
 type result struct {
@@ -91,16 +107,20 @@ type result struct {
 }
 
 type summary struct {
-	Total             int
-	CreateGroup       int
-	ExistingGroup     int
-	CreateTitle       int
-	UpdateTitle       int
-	UnchangedTitle    int
-	ConflictTitle     int
-	Duplicate         int
-	DuplicateConflict int
-	Error             int
+	Total              int
+	CreateGroup        int
+	ExistingGroup      int
+	CreateTitle        int
+	UpdateTitle        int
+	UnchangedTitle     int
+	ConflictTitle      int
+	LinkScene          int
+	SceneAlreadyLinked int
+	MissingScene       int
+	AmbiguousScene     int
+	Duplicate          int
+	DuplicateConflict  int
+	Error              int
 }
 
 type stashClient interface {
@@ -109,6 +129,8 @@ type stashClient interface {
 	createGroup(ctx context.Context, rec groupRecord) (*groupRef, error)
 	findLocalizedTitle(ctx context.Context, objectType, objectID, languageCode string) (*existingTitle, error)
 	upsertLocalizedTitle(ctx context.Context, objectType, objectID string, title localizedTitleRecord) error
+	findSceneByPath(ctx context.Context, path string) (*sceneRef, error)
+	addGroupToScene(ctx context.Context, sceneID, groupID string, sceneIndex *int) error
 }
 
 func main() {
@@ -146,7 +168,7 @@ func runCLI(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, err)
 		return 1
 	}
-	if s.Error > 0 || s.ConflictTitle > 0 || s.DuplicateConflict > 0 {
+	if s.Error > 0 || s.ConflictTitle > 0 || s.MissingScene > 0 || s.AmbiguousScene > 0 || s.DuplicateConflict > 0 {
 		return 1
 	}
 
@@ -162,6 +184,8 @@ func parseConfig(args []string, stderr io.Writer) (config, error) {
 	flags.StringVar(&cfg.InputPath, "input", "", "CSV or JSON input file")
 	flags.StringVar(&cfg.Format, "format", "", "Input format: csv or json. Defaults to file extension.")
 	flags.StringVar(&cfg.DefaultSource, "source", "group-import", "Default localized title source for rows without a source")
+	flags.StringVar(&cfg.PathFrom, "path-prefix-from", "", "Optional source prefix to replace in scene_path values")
+	flags.StringVar(&cfg.PathTo, "path-prefix-to", "", "Optional target prefix for rewritten scene_path values")
 	flags.BoolVar(&cfg.Apply, "apply", false, "Apply mutations. Without this flag, the script only reports planned changes.")
 	flags.BoolVar(&cfg.Overwrite, "overwrite", false, "Allow replacing an existing different localized title value")
 	flags.DurationVar(&cfg.Timeout, "timeout", 30*time.Second, "HTTP timeout")
@@ -174,6 +198,8 @@ func parseConfig(args []string, stderr io.Writer) (config, error) {
 	cfg.InputPath = strings.TrimSpace(cfg.InputPath)
 	cfg.Format = strings.ToLower(strings.TrimSpace(cfg.Format))
 	cfg.DefaultSource = strings.TrimSpace(cfg.DefaultSource)
+	cfg.PathFrom = strings.TrimSpace(cfg.PathFrom)
+	cfg.PathTo = strings.TrimSpace(cfg.PathTo)
 
 	if cfg.Endpoint == "" {
 		return cfg, errors.New("missing required --endpoint")
@@ -199,6 +225,7 @@ type importer struct {
 func (i importer) run(ctx context.Context, records []groupRecord, out io.Writer) (summary, error) {
 	var results []result
 	seen := make(map[string]groupRecord)
+	resolvedGroups := make(map[string]*groupRef)
 
 	for _, raw := range records {
 		rec := i.withDefaults(raw)
@@ -208,8 +235,14 @@ func (i importer) run(ctx context.Context, records []groupRecord, out io.Writer)
 			continue
 		}
 		if previous, ok := seen[key]; ok {
-			action, detail := duplicateAction(previous, rec)
-			results = append(results, result{Action: action, Line: rec.Line, Object: rec.displayName(), Detail: detail})
+			if !sameGroupMetadata(previous, rec) {
+				action, detail := duplicateAction(previous, rec)
+				results = append(results, result{Action: action, Line: rec.Line, Object: rec.displayName(), Detail: detail})
+				continue
+			}
+			if rec.ScenePath != "" {
+				results = append(results, i.planOrApplySceneLink(ctx, rec, *resolvedGroups[key]))
+			}
 			continue
 		}
 		seen[key] = rec
@@ -217,11 +250,16 @@ func (i importer) run(ctx context.Context, records []groupRecord, out io.Writer)
 		ref, groupResults := i.resolveOrCreateGroup(ctx, rec)
 		results = append(results, groupResults...)
 		if ref == nil {
+			delete(seen, key)
 			continue
 		}
+		resolvedGroups[key] = ref
 
 		for _, title := range rec.LocalizedTitles {
 			results = append(results, i.planOrApplyTitle(ctx, rec, *ref, title))
+		}
+		if rec.ScenePath != "" {
+			results = append(results, i.planOrApplySceneLink(ctx, rec, *ref))
 		}
 	}
 
@@ -240,6 +278,8 @@ func (i importer) withDefaults(rec groupRecord) groupRecord {
 	rec.Synopsis = strings.TrimSpace(rec.Synopsis)
 	rec.FrontImage = strings.TrimSpace(rec.FrontImage)
 	rec.BackImage = strings.TrimSpace(rec.BackImage)
+	rec.ScenePath = i.rewriteScenePath(strings.TrimSpace(rec.ScenePath))
+	rec.SceneIndex = strings.TrimSpace(rec.SceneIndex)
 	rec.Source = firstNonEmpty(rec.Source, i.cfg.DefaultSource)
 	rec.URLs = trimList(rec.URLs)
 	rec.TagIDs = trimList(rec.TagIDs)
@@ -256,6 +296,16 @@ func (i importer) withDefaults(rec groupRecord) groupRecord {
 	}
 	rec.LocalizedTitles = titles
 	return rec
+}
+
+func (i importer) rewriteScenePath(path string) string {
+	if path == "" || i.cfg.PathFrom == "" {
+		return path
+	}
+	if !strings.HasPrefix(path, i.cfg.PathFrom) {
+		return path
+	}
+	return i.cfg.PathTo + strings.TrimPrefix(path, i.cfg.PathFrom)
 }
 
 func (i importer) resolveOrCreateGroup(ctx context.Context, rec groupRecord) (*groupRef, []result) {
@@ -319,6 +369,41 @@ func (i importer) planOrApplyTitle(ctx context.Context, rec groupRecord, ref gro
 	return result{Action: actionUpdateTitle, Line: rec.Line, Object: ref.ID + ":" + title.LanguageCode, Detail: "applied"}
 }
 
+func (i importer) planOrApplySceneLink(ctx context.Context, rec groupRecord, ref groupRef) result {
+	scene, err := i.client.findSceneByPath(ctx, rec.ScenePath)
+	if err != nil {
+		return result{Action: actionError, Line: rec.Line, Object: rec.ScenePath, Detail: err.Error()}
+	}
+	if scene == nil {
+		return result{Action: actionMissingScene, Line: rec.Line, Object: rec.ScenePath, Detail: "no exact scene path match"}
+	}
+	if ref.ID == "" {
+		return result{
+			Action: actionWouldLinkScene,
+			Line:   rec.Line,
+			Object: scene.ID,
+			Detail: "scene path matched " + scene.Path + "; would link after group creation",
+		}
+	}
+	for _, group := range scene.Groups {
+		if group.ID == ref.ID {
+			return result{Action: actionSceneAlreadyLinked, Line: rec.Line, Object: scene.ID + ":" + ref.ID, Detail: "scene already has group"}
+		}
+	}
+
+	sceneIndex, err := parseOptionalInt(rec.SceneIndex)
+	if err != nil {
+		return result{Action: actionError, Line: rec.Line, Object: rec.ScenePath, Detail: err.Error()}
+	}
+	if !i.cfg.Apply {
+		return result{Action: actionWouldLinkScene, Line: rec.Line, Object: scene.ID + ":" + ref.ID, Detail: "scene path matched " + scene.Path}
+	}
+	if err := i.client.addGroupToScene(ctx, scene.ID, ref.ID, sceneIndex); err != nil {
+		return result{Action: actionError, Line: rec.Line, Object: scene.ID + ":" + ref.ID, Detail: err.Error()}
+	}
+	return result{Action: actionLinkScene, Line: rec.Line, Object: scene.ID + ":" + ref.ID, Detail: "applied"}
+}
+
 func planTitleAction(title localizedTitleRecord, existing *existingTitle, overwrite bool) (action, string) {
 	if existing == nil {
 		return actionWouldCreateTitle, "missing localized title"
@@ -333,15 +418,19 @@ func planTitleAction(title localizedTitleRecord, existing *existingTitle, overwr
 }
 
 func duplicateAction(previous, current groupRecord) (action, string) {
-	if recordsEquivalent(previous, current) {
+	if sameGroupMetadata(previous, current) && previous.ScenePath == current.ScenePath && previous.SceneIndex == current.SceneIndex {
 		return actionDuplicate, fmt.Sprintf("same group input already appeared on line %d", previous.Line)
 	}
 	return actionDuplicateConflict, fmt.Sprintf("same group identity appeared on line %d with different values", previous.Line)
 }
 
-func recordsEquivalent(a, b groupRecord) bool {
+func sameGroupMetadata(a, b groupRecord) bool {
 	a.Line = 0
+	a.ScenePath = ""
+	a.SceneIndex = ""
 	b.Line = 0
+	b.ScenePath = ""
+	b.SceneIndex = ""
 	return fmt.Sprintf("%#v", a) == fmt.Sprintf("%#v", b)
 }
 
@@ -364,6 +453,14 @@ func writeResults(out io.Writer, apply bool, results []result) summary {
 			s.UnchangedTitle++
 		case actionConflictTitle:
 			s.ConflictTitle++
+		case actionLinkScene, actionWouldLinkScene:
+			s.LinkScene++
+		case actionSceneAlreadyLinked:
+			s.SceneAlreadyLinked++
+		case actionMissingScene:
+			s.MissingScene++
+		case actionAmbiguousScene:
+			s.AmbiguousScene++
 		case actionDuplicate:
 			s.Duplicate++
 		case actionDuplicateConflict:
@@ -382,7 +479,7 @@ func writeResults(out io.Writer, apply bool, results []result) summary {
 	}
 	fmt.Fprintf(
 		out,
-		"\nSummary (%s): total=%d create_group=%d existing_group=%d create_title=%d update_title=%d unchanged_title=%d conflict_title=%d duplicate=%d duplicate_conflict=%d error=%d\n",
+		"\nSummary (%s): total=%d create_group=%d existing_group=%d create_title=%d update_title=%d unchanged_title=%d conflict_title=%d link_scene=%d scene_already_linked=%d missing_scene=%d ambiguous_scene=%d duplicate=%d duplicate_conflict=%d error=%d\n",
 		mode,
 		s.Total,
 		s.CreateGroup,
@@ -391,6 +488,10 @@ func writeResults(out io.Writer, apply bool, results []result) summary {
 		s.UpdateTitle,
 		s.UnchangedTitle,
 		s.ConflictTitle,
+		s.LinkScene,
+		s.SceneAlreadyLinked,
+		s.MissingScene,
+		s.AmbiguousScene,
 		s.Duplicate,
 		s.DuplicateConflict,
 		s.Error,
@@ -503,6 +604,8 @@ func recordFromValues(values map[string]string) groupRecord {
 		TagIDs:     splitList(firstValue(values, "tag_ids", "tags")),
 		FrontImage: firstValue(values, "front_image", "poster", "poster_url"),
 		BackImage:  firstValue(values, "back_image", "back_poster", "back_image_url"),
+		ScenePath:  firstValue(values, "scene_path", "file", "file_path", "path"),
+		SceneIndex: firstValue(values, "scene_index", "index"),
 		Source:     firstValue(values, "source"),
 	}
 
@@ -538,7 +641,7 @@ func localizedTitleLanguage(key string) (string, bool) {
 }
 
 func (r groupRecord) isEmpty() bool {
-	return r.ID == "" && r.Name == "" && len(r.LocalizedTitles) == 0
+	return r.ID == "" && r.Name == "" && r.ScenePath == "" && len(r.LocalizedTitles) == 0
 }
 
 func (r groupRecord) identityKey() string {
@@ -745,6 +848,102 @@ mutation UpsertLocalizedTitleForGroupImport($input: LocalizedTitleCreateInput!) 
 	return nil
 }
 
+func (c *graphqlClient) findSceneByPath(ctx context.Context, path string) (*sceneRef, error) {
+	const query = `
+query FindSceneForGroupImport($path: String!) {
+  findScenes(
+    scene_filter: { path: { value: $path, modifier: EQUALS } }
+    filter: { per_page: 2 }
+  ) {
+    count
+    scenes {
+      id
+      title
+      files {
+        path
+      }
+      groups {
+        group {
+          id
+          name
+        }
+      }
+    }
+  }
+}`
+
+	var out struct {
+		FindScenes struct {
+			Count  int `json:"count"`
+			Scenes []struct {
+				ID    string `json:"id"`
+				Title string `json:"title"`
+				Files []struct {
+					Path string `json:"path"`
+				} `json:"files"`
+				Groups []struct {
+					Group groupRef `json:"group"`
+				} `json:"groups"`
+			} `json:"scenes"`
+		} `json:"findScenes"`
+	}
+	if err := c.do(ctx, query, map[string]any{"path": path}, &out); err != nil {
+		return nil, fmt.Errorf("finding scene path %q: %w", path, err)
+	}
+	if out.FindScenes.Count == 0 {
+		return nil, nil
+	}
+	if out.FindScenes.Count > 1 {
+		return nil, fmt.Errorf("ambiguous scene path %q matched %d scenes", path, out.FindScenes.Count)
+	}
+
+	scene := out.FindScenes.Scenes[0]
+	ret := &sceneRef{
+		ID:    scene.ID,
+		Title: scene.Title,
+		Path:  path,
+	}
+	if len(scene.Files) > 0 {
+		ret.Path = scene.Files[0].Path
+	}
+	for _, group := range scene.Groups {
+		ret.Groups = append(ret.Groups, group.Group)
+	}
+	return ret, nil
+}
+
+func (c *graphqlClient) addGroupToScene(ctx context.Context, sceneID, groupID string, sceneIndex *int) error {
+	const mutation = `
+mutation LinkGroupToSceneForGroupImport($input: SceneUpdateInput!) {
+  sceneUpdate(input: $input) {
+    id
+  }
+}`
+
+	groupInput := map[string]any{"group_id": groupID}
+	if sceneIndex != nil {
+		groupInput["scene_index"] = *sceneIndex
+	}
+	input := map[string]any{
+		"id":     sceneID,
+		"groups": []map[string]any{groupInput},
+	}
+
+	var out struct {
+		SceneUpdate *struct {
+			ID string `json:"id"`
+		} `json:"sceneUpdate"`
+	}
+	if err := c.do(ctx, mutation, map[string]any{"input": input}, &out); err != nil {
+		return fmt.Errorf("linking scene %s to group %s: %w", sceneID, groupID, err)
+	}
+	if out.SceneUpdate == nil {
+		return errors.New("sceneUpdate returned null")
+	}
+
+	return nil
+}
+
 func (c *graphqlClient) do(ctx context.Context, query string, variables map[string]any, out any) error {
 	payload := map[string]any{
 		"query":     query,
@@ -856,6 +1055,18 @@ func normalizeDate(value string) string {
 		}
 	}
 	return value
+}
+
+func parseOptionalInt(value string) (*int, error) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return nil, nil
+	}
+	parsed, err := strconv.Atoi(value)
+	if err != nil {
+		return nil, fmt.Errorf("invalid scene_index %q", value)
+	}
+	return &parsed, nil
 }
 
 func addString(input map[string]any, key, value string) {

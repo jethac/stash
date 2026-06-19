@@ -124,12 +124,13 @@ Completed:
 - Add `scripts/group_import`, a workstation-run GraphQL helper for creating Stash groups as movie records from CSV/JSON exports.
 - Support group import dry-runs, duplicate detection, exact-name existing group reuse, poster/front-image URLs, and localized title upserts.
 - Dry-run `scripts/group_import` against production Stash with a throwaway movie row and verify it makes no writes.
+- Support optional `scene_path` matching and group-to-scene linking for imported movie records.
+- Support Plex database derived movie/group exports where source data is reliable.
+- Generate a real Plex-derived Ero movie/group export with poster/front-image data URLs and path rewriting from `/medialibrary/Ero` to `/data`.
+- Dry-run the real Plex-derived export against production Stash: 823 groups, 1,012 localized titles, 889 scene links, zero conflicts, zero missing scenes, and zero writes.
 
 Remaining tasks:
 
-- Optionally support Plex database derived title exports where source data is reliable.
-- Run a dry-run against production Stash with a real movie/group export.
-- Run a dry-run against production Stash with a real localized-title export.
 - Back up production Stash config/database before any apply run.
 - Apply a verified movie/group import so `/movies` contains real poster-driven records.
 
