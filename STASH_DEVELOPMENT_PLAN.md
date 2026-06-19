@@ -90,7 +90,7 @@ Validation:
 
 ## Phase 4: Poster And Movie Cleanup Workflows
 
-Status: in progress.
+Status: complete.
 
 Completed:
 
@@ -121,16 +121,22 @@ Completed:
 - Add `scripts/localized_titles_backfill`, a workstation-run GraphQL helper for localized title imports.
 - Add dry-run mode, duplicate detection, and conflict reporting.
 - Require `--apply` for writes and `--overwrite` before replacing existing different values.
+- Add `scripts/group_import`, a workstation-run GraphQL helper for creating Stash groups as movie records from CSV/JSON exports.
+- Support group import dry-runs, duplicate detection, exact-name existing group reuse, poster/front-image URLs, and localized title upserts.
+- Dry-run `scripts/group_import` against production Stash with a throwaway movie row and verify it makes no writes.
 
 Remaining tasks:
 
 - Optionally support Plex database derived title exports where source data is reliable.
+- Run a dry-run against production Stash with a real movie/group export.
 - Run a dry-run against production Stash with a real localized-title export.
 - Back up production Stash config/database before any apply run.
+- Apply a verified movie/group import so `/movies` contains real poster-driven records.
 
 Validation:
 
 - `go test ./scripts/localized_titles_backfill`
+- `go test ./scripts/group_import`
 - Dry-run against a copied database or fixture.
 - Upsert test with duplicate language/object pairs.
 - Backup and restore drill before running on production data.
@@ -144,10 +150,10 @@ Tasks:
 - Add or reuse GitHub Actions workflow for Synology amd64 Docker image builds. (Complete)
 - Publish to GitHub Container Registry under `ghcr.io/jethac/stash`. (Complete)
 - Tag images by branch SHA and optional semantic label. (Complete)
-- On Synology, back up the Stash config directory and database.
-- Pull the finished image on Synology.
-- Update the Stash container image reference.
-- Restart the container.
+- On Synology, back up the Stash config directory and database. (Complete for current deployment)
+- Pull the finished image on Synology. (Complete for current deployment)
+- Update the Stash container image reference. (Complete for current deployment)
+- Restart the container. (Complete for current deployment)
 - Smoke test login, movie list, movie detail, localized title edit, and scene playback.
 
 Synology rule:
@@ -157,7 +163,8 @@ Synology rule:
 
 ## Recommended Next Work
 
-1. Wait for the GHCR workflow to publish `ghcr.io/jethac/stash:media-library-improvements`.
-2. Deploy the custom image to Synology after CI artifacts exist.
-3. Dry-run `scripts/localized_titles_backfill` against a real export.
-4. Decide whether title language should become a global user setting.
+1. Produce a real movie/group CSV or JSON export from Plex or another reliable source.
+2. Dry-run `scripts/group_import` against production Stash and inspect conflicts.
+3. Back up production Stash config/database, then apply the verified group import.
+4. Dry-run and apply `scripts/localized_titles_backfill` for any additional localized titles not included in the group import.
+5. Smoke test `/movies` with real groups, poster images, localized title switching/editing, performer incidence sorting, and scene playback.
