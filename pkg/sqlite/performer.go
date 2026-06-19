@@ -804,12 +804,31 @@ func (qb *PerformerStore) sortByScenesSize(direction string) string {
 	return " ORDER BY (" + selectPerformerScenesSizeSQL + ") " + direction
 }
 
+var selectPerformerGroupCountSQL = utils.StrFormat(
+	"SELECT COUNT(DISTINCT {groups_scenes}.{group_id}) FROM {groups_scenes} "+
+		"INNER JOIN {performers_scenes} ON {performers_scenes}.{scene_id} = {groups_scenes}.{scene_id} "+
+		"WHERE {performers_scenes}.{performer_id} = {performers}.id",
+	map[string]interface{}{
+		"performer_id":      performerIDColumn,
+		"performers":        performerTable,
+		"performers_scenes": performersScenesTable,
+		"groups_scenes":     groupsScenesTable,
+		"group_id":          groupIDColumn,
+		"scene_id":          sceneIDColumn,
+	},
+)
+
+func (qb *PerformerStore) sortByGroupCount(direction string) string {
+	return " ORDER BY (" + selectPerformerGroupCountSQL + ") " + direction
+}
+
 var performerSortOptions = sortOptions{
 	"birthdate",
 	"career_start",
 	"career_end",
 	"created_at",
 	"galleries_count",
+	"groups_count",
 	"height",
 	"id",
 	"images_count",
@@ -861,6 +880,8 @@ func (qb *PerformerStore) getPerformerSort(findFilter *models.FindFilterType) (s
 		sortQuery += getCountSort(performerTable, performersImagesTable, performerIDColumn, direction)
 	case "galleries_count":
 		sortQuery += getCountSort(performerTable, performersGalleriesTable, performerIDColumn, direction)
+	case "groups_count":
+		sortQuery += qb.sortByGroupCount(direction)
 	case "play_count":
 		sortQuery += qb.sortByPlayCount(direction)
 	case "o_counter":

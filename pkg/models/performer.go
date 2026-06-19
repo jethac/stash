@@ -164,6 +164,8 @@ type PerformerFilterType struct {
 	ImageCount *IntCriterionInput `json:"image_count"`
 	// Filter by gallery count
 	GalleryCount *IntCriterionInput `json:"gallery_count"`
+	// Filter by group count
+	GroupCount *IntCriterionInput `json:"group_count"`
 	// Filter by play count
 	PlayCount *IntCriterionInput `json:"play_count"`
 	// Filter by O count
