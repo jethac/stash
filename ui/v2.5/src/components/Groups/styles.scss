@@ -292,6 +292,136 @@ button.flip {
   }
 }
 
+.movie-match-review {
+  padding: 1rem;
+
+  &__header {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+
+    h2 {
+      font-size: 1.35rem;
+      margin: 0;
+    }
+  }
+
+  &__actions {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+
+    textarea {
+      min-width: 16rem;
+    }
+
+    input[type="password"] {
+      min-width: 14rem;
+    }
+  }
+
+  &__confidence {
+    max-width: 6rem;
+  }
+
+  &__review-bar {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 1rem;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+  }
+
+  &__summary {
+    color: $text-muted;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  &__bulk-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  &__table {
+    table-layout: fixed;
+
+    th:first-child,
+    td:first-child {
+      width: 2.5rem;
+    }
+
+    th:nth-child(2),
+    td:nth-child(2) {
+      width: 11rem;
+    }
+
+    th:nth-child(5),
+    td:nth-child(5) {
+      width: 5rem;
+    }
+
+    th:nth-child(8),
+    td:nth-child(8) {
+      width: 6rem;
+    }
+
+    td {
+      overflow-wrap: anywhere;
+      vertical-align: top;
+    }
+  }
+
+  &__path {
+    font-family: monospace;
+    font-size: 0.85rem;
+  }
+
+  &__candidate {
+    align-items: flex-start;
+    display: flex;
+    gap: 0.5rem;
+
+    img {
+      aspect-ratio: 2 / 3;
+      object-fit: cover;
+      width: 3.25rem;
+    }
+  }
+
+  &__muted,
+  &__alternates {
+    color: $text-muted;
+    font-size: 0.85rem;
+  }
+
+  &__alternates {
+    margin-top: 0.35rem;
+  }
+
+  &__fields {
+    display: grid;
+    gap: 0.25rem;
+    grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
+
+    .form-check {
+      margin: 0;
+      min-width: 0;
+    }
+
+    .form-check-label {
+      overflow-wrap: anywhere;
+    }
+  }
+}
+
 .related-group-popover-button {
   .containing-group-count {
     display: inline-block;

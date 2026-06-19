@@ -116,6 +116,9 @@ type Query {
     ids: [ID!]
   ): FindGroupsResultType!
 
+  "Plan Plex-style TMDB movie matches for scenes under the provided roots"
+  movieMatchPlan(input: MovieMatchPlanInput!): MovieMatchPlanResult!
+
   findGallery(id: ID!): Gallery
   findGalleries(
     gallery_filter: GalleryFilterType

@@ -1,0 +1,85 @@
+query MovieMatchPlan($input: MovieMatchPlanInput!) {
+  movieMatchPlan(input: $input) {
+    generated_at
+    mode
+    roots
+    min_confidence
+    summary {
+      total
+      matched
+      create_group
+      update_group
+      link_scene
+      title
+      unchanged_group
+      scene_linked
+      no_match
+      conflict
+      error
+    }
+    items {
+      action
+      scene_id
+      path
+      hint {
+        path
+        source_folder
+        source_name
+        title
+        year
+        tmdb_id
+        imdb_id
+        edition
+        quality_tokens
+        residual
+        runtime_seconds
+      }
+      candidate {
+        score
+        reasons
+        candidate {
+          tmdb_id
+          imdb_id
+          title
+          original_title
+          release_date
+          runtime_minutes
+          overview
+          poster_url
+          backdrop_url
+          director
+          production_companies
+          translations
+          alternative_titles
+          query_mode
+          tmdb_url
+          imdb_url
+        }
+      }
+      group_id
+      group_name
+      planned
+      group_input
+      title_input {
+        language_code
+        title
+        source
+      }
+      scene_groups {
+        group_id
+        scene_index
+      }
+      alternates {
+        score
+        reasons
+        candidate {
+          tmdb_id
+          title
+          release_date
+          poster_url
+        }
+      }
+      detail
+    }
+  }
+}

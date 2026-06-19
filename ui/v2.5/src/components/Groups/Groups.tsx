@@ -6,6 +6,7 @@ import Group from "./GroupDetails/Group";
 import GroupCreate from "./GroupDetails/GroupCreate";
 import { FilteredGroupList } from "./GroupList";
 import { View } from "../List/views";
+import { MovieMatchReview } from "./MovieMatchReview";
 
 const Groups: React.FC = () => {
   return <FilteredGroupList view={View.Groups} />;
@@ -18,6 +19,7 @@ const GroupRoutes: React.FC = () => {
       <Helmet {...titleProps} />
       <Switch>
         <Route exact path={["/groups", "/movies"]} component={Groups} />
+        <Route exact path="/movies/match" component={MovieMatchReview} />
         <Route
           exact
           path={["/groups/new", "/movies/new"]}

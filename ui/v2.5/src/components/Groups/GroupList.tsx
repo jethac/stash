@@ -241,6 +241,7 @@ export const FilteredGroupList = PatchComponent(
   (props: IGroupList) => {
     const intl = useIntl();
     const location = useLocation();
+    const history = useHistory();
     const [titleLanguage, setTitleLanguage] = useState(NATIVE_TITLE_LANGUAGE);
 
     const searchFocus = useFocus();
@@ -492,6 +493,13 @@ export const FilteredGroupList = PatchComponent(
         <span className="movie-cleanup-control__label">
           {intl.formatMessage({ id: "movie_cleanup.title" })}
         </span>
+        <Button
+          size="sm"
+          variant="secondary"
+          onClick={() => history.push("/movies/match")}
+        >
+          {intl.formatMessage({ id: "movie_match.title" })}
+        </Button>
         <ButtonGroup size="sm">
           {movieCleanupFilters.map((cleanupFilter) => (
             <Button
