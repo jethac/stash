@@ -1,5 +1,8 @@
+import { faMinus } from "@fortawesome/free-solid-svg-icons";
 import React, { useMemo, useState } from "react";
-import { Alert, Button, Form, Table } from "react-bootstrap";
+import { Alert, Button, Col, Form, Row, Table } from "react-bootstrap";
+import { FolderPathSelector } from "src/components/List/Filters/FolderFilter";
+import { Icon } from "src/components/Shared/Icon";
 import * as GQL from "src/core/generated-graphql";
 import {
   useGroupCreate,
@@ -250,7 +253,7 @@ export const MovieMatchReview: React.FC = () => {
   const [selectedFields, setSelectedFields] = useState<SelectedFieldState>({});
   const [applyState, setApplyState] = useState<ApplyState>({});
   const [error, setError] = useState<string>();
-  const [roots, setRoots] = useState("");
+  const [roots, setRoots] = useState<string[]>([]);
   const [tmdbToken, setTMDBToken] = useState("");
   const [minConfidence, setMinConfidence] = useState(0.9);
   const [overwrite, setOverwrite] = useState(false);
@@ -303,6 +306,9 @@ export const MovieMatchReview: React.FC = () => {
       }
     });
     setReport(parsed);
+    if (parsed.roots) {
+      setRoots(parsed.roots);
+    }
     setApplyState({});
     setSkipped(new Set());
     setSelectedFields(nextFields);
@@ -331,11 +337,7 @@ export const MovieMatchReview: React.FC = () => {
   }
 
   async function generatePlan() {
-    const parsedRoots = roots
-      .split(/\r?\n/)
-      .map((root) => root.trim())
-      .filter(Boolean);
-    if (parsedRoots.length === 0) {
+    if (roots.length === 0) {
       setError("Enter at least one root");
       return;
     }
@@ -346,7 +348,7 @@ export const MovieMatchReview: React.FC = () => {
       const result = await loadMovieMatchPlan({
         variables: {
           input: {
-            roots: parsedRoots,
+            roots,
             ...(token ? { tmdb_token: token } : {}),
             min_confidence: minConfidence,
             overwrite,
@@ -408,6 +410,16 @@ export const MovieMatchReview: React.FC = () => {
     return uniqueSceneIDs(
       items.filter((_, index) => selected.has(index) && !skipped.has(index))
     );
+  }
+
+  function addRoot(path: string) {
+    const trimmed = path.trim();
+    if (!trimmed || roots.includes(trimmed)) return;
+    setRoots([...roots, trimmed]);
+  }
+
+  function removeRoot(path: string) {
+    setRoots(roots.filter((root) => root !== path));
   }
 
   function toggle(index: number) {
@@ -642,13 +654,6 @@ export const MovieMatchReview: React.FC = () => {
         <h2>Movie Match</h2>
         <div className="movie-match-review__actions">
           <Form.Control
-            as="textarea"
-            rows={2}
-            placeholder="Roots"
-            value={roots}
-            onChange={(event) => setRoots(event.currentTarget.value)}
-          />
-          <Form.Control
             type="password"
             placeholder="TMDB token override"
             value={tmdbToken}
@@ -693,6 +698,35 @@ export const MovieMatchReview: React.FC = () => {
             Apply selected
           </Button>
         </div>
+      </div>
+
+      <div className="movie-match-review__roots">
+        <div className="movie-match-review__roots-header">Roots</div>
+        <div className="movie-match-review__selected-roots">
+          {roots.length === 0 && (
+            <div className="movie-match-review__empty-root">
+              Select one or more folders
+            </div>
+          )}
+          {roots.map((root) => (
+            <Row className="align-items-center mb-1" key={root}>
+              <Col className="movie-match-review__root-path">{root}</Col>
+              <Col xs="auto">
+                <Button
+                  size="sm"
+                  variant="danger"
+                  onClick={() => removeRoot(root)}
+                >
+                  <Icon icon={faMinus} />
+                </Button>
+              </Col>
+            </Row>
+          ))}
+        </div>
+        <FolderPathSelector
+          mode={GQL.FilterMode.Scenes}
+          onSelect={(folder) => addRoot(folder.path)}
+        />
       </div>
 
       {error && <Alert variant="danger">{error}</Alert>}
