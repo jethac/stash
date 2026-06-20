@@ -220,6 +220,7 @@ func (qb *performerFilterHandler) criterionHandler() criterionHandler {
 		qb.markerCountCriterionHandler(filter.MarkerCount),
 		qb.imageCountCriterionHandler(filter.ImageCount),
 		qb.galleryCountCriterionHandler(filter.GalleryCount),
+		qb.groupCountCriterionHandler(filter.GroupCount),
 		qb.playCounterCriterionHandler(filter.PlayCount),
 		qb.oCounterCriterionHandler(filter.OCounter),
 		&dateCriterionHandler{filter.Birthdate, tableName + ".birthdate", nil},
@@ -474,6 +475,20 @@ func (qb *performerFilterHandler) galleryCountCriterionHandler(count *models.Int
 	}
 
 	return h.handler(count)
+}
+
+func (qb *performerFilterHandler) groupCountCriterionHandler(count *models.IntCriterionInput) criterionHandlerFunc {
+	return func(ctx context.Context, f *filterBuilder) {
+		if count != nil {
+			const query = `(SELECT COUNT(DISTINCT groups_scenes.group_id)
+  FROM groups_scenes
+  INNER JOIN performers_scenes ON performers_scenes.scene_id = groups_scenes.scene_id
+  WHERE performers_scenes.performer_id = performers.id)`
+
+			clause, args := getIntCriterionWhereClause(query, *count)
+			f.addWhere(clause, args...)
+		}
+	}
 }
 
 // used for sorting and filtering on performer o-count

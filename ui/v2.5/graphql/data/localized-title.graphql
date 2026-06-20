@@ -1,0 +1,8 @@
+fragment LocalizedTitleData on LocalizedTitle {
+  id
+  object_type
+  object_id
+  language_code
+  title
+  source
+}

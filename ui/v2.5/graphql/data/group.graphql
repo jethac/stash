@@ -25,6 +25,9 @@ fragment GroupData on Group {
 
   synopsis
   urls
+  localized_titles {
+    ...LocalizedTitleData
+  }
   front_image_path
   back_image_path
   scene_count
@@ -71,6 +74,9 @@ fragment ListGroupData on Group {
 
   synopsis
   urls
+  localized_titles {
+    ...LocalizedTitleData
+  }
   front_image_path
   back_image_path
   scene_count

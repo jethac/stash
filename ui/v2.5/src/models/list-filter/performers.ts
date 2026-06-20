@@ -54,6 +54,10 @@ const sortByOptions = [
       value: "galleries_count",
     },
     {
+      messageID: "group_count",
+      value: "groups_count",
+    },
+    {
       messageID: "o_count",
       value: "o_counter",
       sfwMessageID: "o_count_sfw",
@@ -108,6 +112,7 @@ const criterionOptions = [
   createMandatoryNumberCriterionOption("scene_count"),
   createMandatoryNumberCriterionOption("image_count"),
   createMandatoryNumberCriterionOption("gallery_count"),
+  createMandatoryNumberCriterionOption("group_count"),
   createMandatoryNumberCriterionOption("play_count"),
   createMandatoryNumberCriterionOption("o_counter", "o_count", {
     sfwMessageID: "o_count_sfw",

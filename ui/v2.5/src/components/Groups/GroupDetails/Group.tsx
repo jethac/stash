@@ -39,12 +39,13 @@ import {
   TabTitleCounter,
   useTabKey,
 } from "src/components/Shared/DetailsPage/Tabs";
-import { Button, Tab, Tabs } from "react-bootstrap";
+import { Button, Form, Tab, Tabs } from "react-bootstrap";
 import { GroupSubGroupsPanel } from "./GroupSubGroupsPanel";
 import { GroupPerformersPanel } from "./GroupPerformersPanel";
 import { Icon } from "src/components/Shared/Icon";
 import { goBackOrReplace } from "src/utils/history";
 import { PatchComponent } from "src/patch";
+import { getGroupDisplayTitle, NATIVE_TITLE_LANGUAGE } from "src/core/groups";
 
 const validTabs = ["default", "scenes", "performers", "subgroups"] as const;
 type TabKey = (typeof validTabs)[number];
@@ -157,6 +158,23 @@ const GroupPage: React.FC<IProps> = PatchComponent(
     const abbreviateCounter = uiConfig?.abbreviateCounters ?? false;
 
     const [focusedOnFront, setFocusedOnFront] = useState<boolean>(true);
+    const [titleLanguage, setTitleLanguage] = useState(NATIVE_TITLE_LANGUAGE);
+
+    const titleLanguageOptions = useMemo(() => {
+      const languageCodes = new Set<string>();
+
+      group.localized_titles.forEach((title) => {
+        languageCodes.add(title.language_code);
+      });
+
+      if (titleLanguage !== NATIVE_TITLE_LANGUAGE) {
+        languageCodes.add(titleLanguage);
+      }
+
+      return Array.from(languageCodes).sort((a, b) => a.localeCompare(b));
+    }, [group.localized_titles, titleLanguage]);
+
+    const displayTitle = getGroupDisplayTitle(group, titleLanguage);
 
     const [collapsed, setCollapsed] = useState<boolean>(!showAllDetails);
     const loadStickyHeader = useLoadStickyHeader();
@@ -340,10 +358,30 @@ const GroupPage: React.FC<IProps> = PatchComponent(
       "full-width": !collapsed && !compactExpandedDetails,
     });
 
+    const titleLanguageControl = titleLanguageOptions.length > 0 && (
+      <Form.Control
+        aria-label={intl.formatMessage({ id: "title_language" })}
+        as="select"
+        className="group-detail-title-language"
+        size="sm"
+        value={titleLanguage}
+        onChange={(e) => setTitleLanguage(e.currentTarget.value)}
+      >
+        <option value={NATIVE_TITLE_LANGUAGE}>
+          {intl.formatMessage({ id: "native_title" })}
+        </option>
+        {titleLanguageOptions.map((languageCode) => (
+          <option key={languageCode} value={languageCode}>
+            {languageCode.toUpperCase()}
+          </option>
+        ))}
+      </Form.Control>
+    );
+
     return (
       <div id="group-page" className="row">
         <Helmet>
-          <title>{group?.name}</title>
+          <title>{displayTitle}</title>
         </Helmet>
 
         <div className={headerClassName}>
@@ -391,7 +429,7 @@ const GroupPage: React.FC<IProps> = PatchComponent(
             </HeaderImage>
             <div className="row">
               <div className="group-head col">
-                <DetailTitle name={group.name} classNamePrefix="group">
+                <DetailTitle name={displayTitle} classNamePrefix="group">
                   {!isEditing && (
                     <ExpandCollapseButton
                       collapsed={collapsed}
@@ -399,6 +437,7 @@ const GroupPage: React.FC<IProps> = PatchComponent(
                     />
                   )}
                   <span className="name-icons">
+                    {titleLanguageControl}
                     <ExternalLinkButtons urls={group.urls ?? undefined} />
                   </span>
                 </DetailTitle>
@@ -429,7 +468,7 @@ const GroupPage: React.FC<IProps> = PatchComponent(
                   />
                 ) : (
                   <DetailsEditNavbar
-                    objectName={group.name}
+                    objectName={displayTitle}
                     isNew={false}
                     isEditing={isEditing}
                     onToggleEdit={() => toggleEditing()}
@@ -444,7 +483,10 @@ const GroupPage: React.FC<IProps> = PatchComponent(
         </div>
 
         {!isEditing && loadStickyHeader && (
-          <CompressedGroupDetailsPanel group={group} />
+          <CompressedGroupDetailsPanel
+            group={group}
+            displayTitle={displayTitle}
+          />
         )}
 
         <div className="detail-body">

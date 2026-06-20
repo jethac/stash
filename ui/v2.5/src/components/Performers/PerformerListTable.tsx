@@ -208,6 +208,12 @@ export const PerformerListTable: React.FC<IPerformerListTableProps> = (
     </Link>
   );
 
+  const GroupCountCell = (performer: GQL.PerformerDataFragment) => (
+    <Link to={NavUtils.makePerformerGroupsUrl(performer)}>
+      <span>{performer.group_count}</span>
+    </Link>
+  );
+
   const OCounterCell = (performer: GQL.PerformerDataFragment) => (
     <>{performer.o_counter}</>
   );
@@ -347,6 +353,12 @@ export const PerformerListTable: React.FC<IPerformerListTableProps> = (
       label: intl.formatMessage({ id: "images" }),
       defaultShow: true,
       render: ImageCountCell,
+    },
+    {
+      value: "group_count",
+      label: intl.formatMessage({ id: "groups" }),
+      defaultShow: true,
+      render: GroupCountCell,
     },
     {
       value: "o_counter",

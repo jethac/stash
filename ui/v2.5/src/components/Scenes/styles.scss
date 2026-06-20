@@ -997,6 +997,29 @@ input[type="range"].blue-slider {
   }
 }
 
+.scene-cleanup-control {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0 0 0.75rem;
+
+  &__label {
+    color: $text-muted;
+    font-size: 0.9rem;
+    white-space: nowrap;
+  }
+
+  .btn-group {
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+
+  .btn {
+    border-radius: 0.25rem;
+  }
+}
+
 // hide drop down menu items for play and create new
 // when the buttons are visible
 @include media-breakpoint-up(sm) {

@@ -10,7 +10,7 @@ import {
 import { LoadingIndicator } from "src/components/Shared/LoadingIndicator";
 import { DetailsEditNavbar } from "src/components/Shared/DetailsEditNavbar";
 import { useToast } from "src/hooks/Toast";
-import { Modal as BSModal, Form, Button } from "react-bootstrap";
+import { Modal as BSModal, Form, Button, Col, Row } from "react-bootstrap";
 import TextUtils from "src/utils/text";
 import ImageUtils from "src/utils/image";
 import { useFormik } from "formik";
@@ -44,6 +44,51 @@ interface IGroupEditPanel {
   setEncodingImage: (loading: boolean) => void;
 }
 
+const editableLocalizedTitleLanguages = [
+  { code: "en", label: "English" },
+  { code: "ja", label: "Japanese" },
+  { code: "fr", label: "French" },
+] as const;
+
+type EditableLocalizedTitleCode =
+  (typeof editableLocalizedTitleLanguages)[number]["code"];
+
+type LocalizedTitleState = Record<EditableLocalizedTitleCode, string>;
+
+type EditableLocalizedTitle = Pick<
+  GQL.LocalizedTitleDataFragment,
+  "id" | "language_code" | "title" | "source"
+>;
+
+function emptyLocalizedTitleState(): LocalizedTitleState {
+  return {
+    en: "",
+    ja: "",
+    fr: "",
+  };
+}
+
+function findEditableLocalizedTitle(
+  titles: readonly EditableLocalizedTitle[] | null | undefined,
+  languageCode: EditableLocalizedTitleCode
+) {
+  return titles?.find(
+    (title) => title.language_code.toLowerCase() === languageCode
+  );
+}
+
+function getLocalizedTitleState(
+  titles: readonly EditableLocalizedTitle[] | null | undefined
+) {
+  const state = emptyLocalizedTitleState();
+
+  editableLocalizedTitleLanguages.forEach(({ code }) => {
+    state[code] = findEditableLocalizedTitle(titles, code)?.title ?? "";
+  });
+
+  return state;
+}
+
 export const GroupEditPanel: React.FC<IGroupEditPanel> = ({
   group,
   onSubmit,
@@ -68,6 +113,13 @@ export const GroupEditPanel: React.FC<IGroupEditPanel> = ({
 
   const [studio, setStudio] = useState<Studio | null>(null);
   const [containingGroups, setContainingGroups] = useState<Group[]>([]);
+  const initialLocalizedTitles = useMemo(
+    () => getLocalizedTitleState(group.localized_titles),
+    [group.localized_titles]
+  );
+  const [localizedTitles, setLocalizedTitles] = useState<LocalizedTitleState>(
+    initialLocalizedTitles
+  );
 
   const schema = yup.object({
     name: yup.string().required(),
@@ -111,6 +163,14 @@ export const GroupEditPanel: React.FC<IGroupEditPanel> = ({
   type InputValues = yup.InferType<typeof schema>;
 
   const [customFieldsError, setCustomFieldsError] = useState<string>();
+  const [upsertLocalizedTitle] = GQL.useLocalizedTitleUpsertMutation();
+  const [destroyLocalizedTitle] = GQL.useLocalizedTitleDestroyMutation();
+
+  const localizedTitleDirty = !isEqual(localizedTitles, initialLocalizedTitles);
+
+  useEffect(() => {
+    setLocalizedTitles(initialLocalizedTitles);
+  }, [initialLocalizedTitles]);
 
   function submit(values: InputValues) {
     const input = {
@@ -163,7 +223,7 @@ export const GroupEditPanel: React.FC<IGroupEditPanel> = ({
     //   e.preventDefault();
     // });
     Mousetrap.bind("s s", () => {
-      if (formik.dirty) {
+      if (formik.dirty || localizedTitleDirty) {
         formik.submitForm();
       }
     });
@@ -225,10 +285,66 @@ export const GroupEditPanel: React.FC<IGroupEditPanel> = ({
     }
   }
 
+  async function saveLocalizedTitles() {
+    if (isNew || !group.id || !localizedTitleDirty) {
+      return;
+    }
+
+    for (const { code } of editableLocalizedTitleLanguages) {
+      const title = localizedTitles[code].trim();
+      const existing = findEditableLocalizedTitle(group.localized_titles, code);
+
+      if (title) {
+        if (existing?.title === title) {
+          continue;
+        }
+
+        await upsertLocalizedTitle({
+          variables: {
+            input: {
+              object_type: GQL.LocalizedTitleObjectType.Group,
+              object_id: group.id,
+              language_code: code,
+              title,
+              source: existing?.source ?? undefined,
+            },
+          },
+          refetchQueries: [
+            { query: GQL.FindGroupDocument, variables: { id: group.id } },
+          ],
+          awaitRefetchQueries: true,
+        });
+      } else if (existing) {
+        await destroyLocalizedTitle({
+          variables: { id: existing.id },
+          refetchQueries: [
+            { query: GQL.FindGroupDocument, variables: { id: group.id } },
+          ],
+          awaitRefetchQueries: true,
+        });
+      }
+    }
+  }
+
   async function onSave(input: InputValues, andNew?: boolean) {
     setIsLoading(true);
     try {
-      await onSubmit(input, andNew);
+      await saveLocalizedTitles();
+
+      if (formik.dirty || isNew) {
+        await onSubmit(input, andNew);
+      } else {
+        Toast.success(
+          intl.formatMessage(
+            { id: "toast.updated_entity" },
+            {
+              entity: intl.formatMessage({ id: "group" }).toLocaleLowerCase(),
+            }
+          )
+        );
+        onCancel();
+      }
+
       formik.resetForm();
     } catch (e) {
       Toast.error(e);
@@ -363,7 +479,7 @@ export const GroupEditPanel: React.FC<IGroupEditPanel> = ({
         onHide={() => setIsImageAlertOpen(false)}
       >
         <BSModal.Body>
-          <p>Select image to set</p>
+          <p>{intl.formatMessage({ id: "dialogs.select_group_image" })}</p>
         </BSModal.Body>
         <BSModal.Footer>
           <div>
@@ -379,13 +495,13 @@ export const GroupEditPanel: React.FC<IGroupEditPanel> = ({
               className="mr-2"
               onClick={() => setImageFromClipboard(false)}
             >
-              Back Image
+              {intl.formatMessage({ id: "actions.set_back_image_plain" })}
             </Button>
             <Button
               className="mr-2"
               onClick={() => setImageFromClipboard(true)}
             >
-              Front Image
+              {intl.formatMessage({ id: "poster" })}
             </Button>
           </div>
         </BSModal.Footer>
@@ -444,6 +560,36 @@ export const GroupEditPanel: React.FC<IGroupEditPanel> = ({
     return renderField("containing_groups", title, control);
   }
 
+  function renderLocalizedTitlesField() {
+    if (isNew) {
+      return null;
+    }
+
+    return (
+      <Form.Group as={Row} data-field="localized_titles">
+        <Form.Label column sm={3} xl={2}>
+          {intl.formatMessage({ id: "localized_titles" })}
+        </Form.Label>
+        <Col sm={9} xl={7}>
+          {editableLocalizedTitleLanguages.map(({ code, label }) => (
+            <Form.Group key={code}>
+              <Form.Label>{label}</Form.Label>
+              <Form.Control
+                value={localizedTitles[code]}
+                onChange={(event) =>
+                  setLocalizedTitles({
+                    ...localizedTitles,
+                    [code]: event.currentTarget.value,
+                  })
+                }
+              />
+            </Form.Group>
+          ))}
+        </Col>
+      </Form.Group>
+    );
+  }
+
   // TODO: CSS class
   return (
     <div>
@@ -457,7 +603,7 @@ export const GroupEditPanel: React.FC<IGroupEditPanel> = ({
       )}
 
       <Prompt
-        when={formik.dirty}
+        when={formik.dirty || localizedTitleDirty}
         message={(location, action) => {
           // Check if it's a redirect after group creation
           if (action === "PUSH" && location.pathname.startsWith("/groups/"))
@@ -476,6 +622,7 @@ export const GroupEditPanel: React.FC<IGroupEditPanel> = ({
         {renderStudioField()}
         {renderInputField("director")}
         {renderURLListField("urls", onScrapeGroupURL, urlScrapable)}
+        {renderLocalizedTitlesField()}
         {renderInputField("synopsis", "textarea")}
         {renderTagsField()}
 
@@ -496,13 +643,15 @@ export const GroupEditPanel: React.FC<IGroupEditPanel> = ({
         onSave={formik.handleSubmit}
         onSaveAndNew={isNew ? onSaveAndNewClick : undefined}
         saveDisabled={
-          (!isNew && !formik.dirty) ||
+          (!isNew && !formik.dirty && !localizedTitleDirty) ||
           !isEqual(formik.errors, {}) ||
           customFieldsError !== undefined
         }
         onImageChange={onFrontImageChange}
         onImageChangeURL={onFrontImageLoad}
         onClearImage={() => onFrontImageLoad(null)}
+        imageText={intl.formatMessage({ id: "actions.set_poster" })}
+        clearImageText={intl.formatMessage({ id: "actions.clear_poster" })}
         onBackImageChange={onBackImageChange}
         onBackImageChangeURL={onBackImageLoad}
         onClearBackImage={() => onBackImageLoad(null)}

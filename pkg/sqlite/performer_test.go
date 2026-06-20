@@ -2135,6 +2135,88 @@ func verifyPerformersSceneCount(t *testing.T, sceneCountCriterion models.IntCrit
 	})
 }
 
+func TestPerformerQueryGroupCount(t *testing.T) {
+	const groupCount = 1
+	groupCountCriterion := models.IntCriterionInput{
+		Value:    groupCount,
+		Modifier: models.CriterionModifierEquals,
+	}
+
+	verifyPerformersGroupCount(t, groupCountCriterion)
+
+	groupCountCriterion.Modifier = models.CriterionModifierNotEquals
+	verifyPerformersGroupCount(t, groupCountCriterion)
+
+	groupCountCriterion.Modifier = models.CriterionModifierGreaterThan
+	verifyPerformersGroupCount(t, groupCountCriterion)
+
+	groupCountCriterion.Modifier = models.CriterionModifierLessThan
+	verifyPerformersGroupCount(t, groupCountCriterion)
+}
+
+func verifyPerformersGroupCount(t *testing.T, groupCountCriterion models.IntCriterionInput) {
+	if err := withRollbackTxn(func(ctx context.Context) error {
+		if err := ensurePerformerGroupCountFixture(ctx); err != nil {
+			return err
+		}
+
+		performerFilter := models.PerformerFilterType{
+			GroupCount: &groupCountCriterion,
+		}
+
+		performers := queryPerformers(ctx, t, &performerFilter, nil)
+		assert.Greater(t, len(performers), 0)
+
+		for _, performer := range performers {
+			ids, err := db.Group.FindByPerformerID(ctx, performer.ID)
+			if err != nil {
+				return err
+			}
+			verifyInt(t, len(ids), groupCountCriterion)
+		}
+
+		return nil
+	}); err != nil {
+		t.Error(err)
+	}
+}
+
+func ensurePerformerGroupCountFixture(ctx context.Context) error {
+	_, err := db.Scene.UpdatePartial(ctx, sceneIDs[sceneIdxWithPerformer], models.ScenePartial{
+		GroupIDs: &models.UpdateGroupIDs{
+			Groups: []models.GroupsScenes{
+				{GroupID: groupIDs[groupIdxWithScene]},
+			},
+			Mode: models.RelationshipUpdateModeSet,
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Scene.UpdatePartial(ctx, sceneIDs[sceneIdx1WithPerformer], models.ScenePartial{
+		GroupIDs: &models.UpdateGroupIDs{
+			Groups: []models.GroupsScenes{
+				{GroupID: groupIDs[groupIdxWithStudio]},
+			},
+			Mode: models.RelationshipUpdateModeSet,
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Scene.UpdatePartial(ctx, sceneIDs[sceneIdx2WithPerformer], models.ScenePartial{
+		GroupIDs: &models.UpdateGroupIDs{
+			Groups: []models.GroupsScenes{
+				{GroupID: groupIDs[groupIdxWithTag]},
+			},
+			Mode: models.RelationshipUpdateModeSet,
+		},
+	})
+	return err
+}
+
 func TestPerformerQueryImageCount(t *testing.T) {
 	const imageCount = 1
 	imageCountCriterion := models.IntCriterionInput{
@@ -2530,6 +2612,66 @@ func TestPerformerQuerySortScenesCount(t *testing.T) {
 
 		return nil
 	})
+}
+
+func TestPerformerQuerySortGroupsCount(t *testing.T) {
+	sort := "groups_count"
+	direction := models.SortDirectionEnumDesc
+	findFilter := &models.FindFilterType{
+		Sort:      &sort,
+		Direction: &direction,
+	}
+
+	if err := withRollbackTxn(func(ctx context.Context) error {
+		if err := ensurePerformerGroupCountFixture(ctx); err != nil {
+			return err
+		}
+
+		performers, _, err := db.Performer.Query(ctx, nil, findFilter)
+		if err != nil {
+			t.Errorf("Error querying performers: %s", err.Error())
+		}
+
+		assert.True(t, len(performers) > 0)
+		verifyPerformersSortedByGroupCount(ctx, t, performers, false)
+
+		direction = models.SortDirectionEnumAsc
+
+		performers, _, err = db.Performer.Query(ctx, nil, findFilter)
+		if err != nil {
+			t.Errorf("Error querying performers: %s", err.Error())
+		}
+
+		assert.True(t, len(performers) > 0)
+		verifyPerformersSortedByGroupCount(ctx, t, performers, true)
+
+		return nil
+	}); err != nil {
+		t.Error(err)
+	}
+}
+
+func verifyPerformersSortedByGroupCount(ctx context.Context, t *testing.T, performers []*models.Performer, ascending bool) {
+	var lastCount *int
+
+	for _, performer := range performers {
+		groups, err := db.Group.FindByPerformerID(ctx, performer.ID)
+		if err != nil {
+			t.Errorf("Error querying performer groups: %s", err.Error())
+			return
+		}
+
+		count := len(groups)
+		if lastCount != nil {
+			if ascending {
+				assert.LessOrEqual(t, *lastCount, count)
+			} else {
+				assert.GreaterOrEqual(t, *lastCount, count)
+			}
+		}
+
+		lastCount = &count
+	}
 }
 
 func TestPerformerCountByTagID(t *testing.T) {

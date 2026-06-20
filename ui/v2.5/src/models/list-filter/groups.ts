@@ -18,6 +18,7 @@ import {
   SubGroupsCriterionOption,
 } from "./criteria/groups";
 import { CustomFieldsCriterionOption } from "./criteria/custom-fields";
+import { FolderCriterionOption } from "./criteria/folder";
 
 const defaultSortBy = "name";
 
@@ -38,6 +39,10 @@ const sortByOptions = [
       value: "scenes_count",
     },
     {
+      messageID: "performer_count",
+      value: "performer_count",
+    },
+    {
       messageID: "o_count",
       value: "o_counter",
       sfwMessageID: "o_count_sfw",
@@ -49,7 +54,9 @@ const criterionOptions = [
   StudiosCriterionOption,
   GroupIsMissingCriterionOption,
   createStringCriterionOption("url"),
+  FolderCriterionOption,
   createStringCriterionOption("name"),
+  createStringCriterionOption("localized_title"),
   createStringCriterionOption("director"),
   createStringCriterionOption("synopsis"),
   createDurationCriterionOption("duration"),
@@ -66,6 +73,7 @@ const criterionOptions = [
   TagsCriterionOption,
   createMandatoryNumberCriterionOption("tag_count"),
   createMandatoryNumberCriterionOption("scene_count"),
+  createMandatoryNumberCriterionOption("performer_count"),
   createMandatoryTimestampCriterionOption("created_at"),
   createMandatoryTimestampCriterionOption("updated_at"),
   CustomFieldsCriterionOption,

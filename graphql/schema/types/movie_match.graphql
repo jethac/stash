@@ -1,0 +1,104 @@
+input MovieMatchPlanInput {
+  "Path roots to scan for bulk matching. Either roots or scene_ids must be provided."
+  roots: [String!]
+  "Specific scenes to re-read from Stash and re-query against TMDB."
+  scene_ids: [ID!]
+  "Optional TMDB v3 read-access token. Defaults to TMDB_BEARER_TOKEN or TMDB_API_READ_ACCESS_TOKEN on the server."
+  tmdb_token: String
+  cache_dir: String
+  include_adult: Boolean = true
+  min_confidence: Float = 0.9
+  language: String = "en-US"
+  translations: [String!] = ["en-US", "ja-JP", "fr-FR"]
+  per_page: Int = 200
+  overwrite: Boolean = false
+}
+
+type MovieMatchHint {
+  path: String!
+  source_folder: String!
+  source_name: String!
+  title: String!
+  year: Int!
+  tmdb_id: String!
+  imdb_id: String!
+  edition: String!
+  quality_tokens: [String!]!
+  residual: [String!]!
+  runtime_seconds: Float!
+}
+
+type MovieMatchCandidate {
+  tmdb_id: Int!
+  imdb_id: String!
+  title: String!
+  original_title: String!
+  release_date: String!
+  runtime_minutes: Int!
+  overview: String!
+  poster_url: String!
+  backdrop_url: String!
+  director: String!
+  production_companies: [String!]!
+  translations: Map!
+  alternative_titles: [String!]!
+  query_mode: String!
+  tmdb_url: String!
+  imdb_url: String!
+}
+
+type MovieMatchScoredCandidate {
+  candidate: MovieMatchCandidate!
+  score: Float!
+  reasons: [String!]!
+}
+
+type MovieMatchLocalizedTitleInput {
+  language_code: String!
+  title: String!
+  source: String
+}
+
+type MovieMatchSceneGroupInput {
+  group_id: ID!
+  scene_index: Int
+}
+
+type MovieMatchPlanItem {
+  action: String!
+  scene_id: ID!
+  path: String!
+  hint: MovieMatchHint!
+  candidate: MovieMatchScoredCandidate
+  group_id: ID
+  group_name: String
+  planned: [String!]!
+  group_input: Map
+  title_input: MovieMatchLocalizedTitleInput
+  scene_groups: [MovieMatchSceneGroupInput!]!
+  alternates: [MovieMatchScoredCandidate!]!
+  detail: String
+}
+
+type MovieMatchSummary {
+  total: Int!
+  matched: Int!
+  create_group: Int!
+  update_group: Int!
+  link_scene: Int!
+  title: Int!
+  unchanged_group: Int!
+  scene_linked: Int!
+  no_match: Int!
+  conflict: Int!
+  error: Int!
+}
+
+type MovieMatchPlanResult {
+  generated_at: String!
+  mode: String!
+  roots: [String!]!
+  min_confidence: Float!
+  items: [MovieMatchPlanItem!]!
+  summary: MovieMatchSummary!
+}

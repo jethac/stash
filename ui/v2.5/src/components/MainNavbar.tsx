@@ -62,6 +62,10 @@ const messages = defineMessages({
     id: "groups",
     defaultMessage: "Groups",
   },
+  movies: {
+    id: "movies",
+    defaultMessage: "Movies",
+  },
   markers: {
     id: "markers",
     defaultMessage: "Markers",
@@ -114,8 +118,8 @@ const allMenuItems: IMenuItem[] = [
   },
   {
     name: "groups",
-    message: messages.groups,
-    href: "/groups",
+    message: messages.movies,
+    href: "/movies",
     icon: faFilm,
     hotkey: "g v",
     userCreatable: true,

@@ -31,7 +31,11 @@ export const ParentFolderCriterionOption = new ModifierCriterionOption({
 
 export class FolderCriterion extends IHierarchicalLabeledIdCriterion {
   constructor() {
-    super(FolderCriterionOption);
+    super(FolderCriterionOption, {
+      items: [],
+      excluded: [],
+      depth: -1,
+    });
   }
 
   public applyToCriterionInput(input: Record<string, unknown>) {

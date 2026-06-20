@@ -5,6 +5,8 @@ type GroupFilterType struct {
 	Name     *StringCriterionInput `json:"name"`
 	Director *StringCriterionInput `json:"director"`
 	Synopsis *StringCriterionInput `json:"synopsis"`
+	// Filter by localized title
+	LocalizedTitle *StringCriterionInput `json:"localized_title"`
 	// Filter by duration (in seconds)
 	Duration *IntCriterionInput `json:"duration"`
 	// Filter by rating expressed as 1-100
@@ -35,10 +37,14 @@ type GroupFilterType struct {
 	SubGroupCount *IntCriterionInput `json:"sub_group_count"`
 	// Filter by number of scenes the group has
 	SceneCount *IntCriterionInput `json:"scene_count"`
+	// Filter by number of performers appearing in the group's scenes
+	PerformerCount *IntCriterionInput `json:"performer_count"`
 	// Filter by related scenes that meet this criteria
 	ScenesFilter *SceneFilterType `json:"scenes_filter"`
 	// Filter by related studios that meet this criteria
 	StudiosFilter *StudioFilterType `json:"studios_filter"`
+	// Filter by related scene files that meet this criteria
+	FilesFilter *FileFilterType `json:"files_filter"`
 	// Filter by created at
 	CreatedAt *TimestampCriterionInput `json:"created_at"`
 	// Filter by updated at

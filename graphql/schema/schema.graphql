@@ -116,6 +116,9 @@ type Query {
     ids: [ID!]
   ): FindGroupsResultType!
 
+  "Plan Plex-style TMDB movie matches for scenes under the provided roots"
+  movieMatchPlan(input: MovieMatchPlanInput!): MovieMatchPlanResult!
+
   findGallery(id: ID!): Gallery
   findGalleries(
     gallery_filter: GalleryFilterType
@@ -277,6 +280,17 @@ type Query {
 
   # LatestVersion
   latestversion: LatestVersion!
+
+  findLocalizedTitle(id: ID!): LocalizedTitle
+  findLocalizedTitlesForObject(
+    object_type: LocalizedTitleObjectType!
+    object_id: ID!
+  ): [LocalizedTitle!]!
+  findLocalizedTitleForObjectLanguage(
+    object_type: LocalizedTitleObjectType!
+    object_id: ID!
+    language_code: String!
+  ): LocalizedTitle
 }
 
 type Mutation {
@@ -398,6 +412,15 @@ type Mutation {
   groupDestroy(input: GroupDestroyInput!): Boolean!
   groupsDestroy(ids: [ID!]!): Boolean!
   bulkGroupUpdate(input: BulkGroupUpdateInput!): [Group!]
+
+  localizedTitleCreate(input: LocalizedTitleCreateInput!): LocalizedTitle!
+  localizedTitleUpdate(input: LocalizedTitleUpdateInput!): LocalizedTitle!
+  localizedTitleUpsert(input: LocalizedTitleCreateInput!): LocalizedTitle!
+  localizedTitleDestroy(id: ID!): Boolean!
+  localizedTitlesDestroyForObject(
+    object_type: LocalizedTitleObjectType!
+    object_id: ID!
+  ): Boolean!
 
   addGroupSubGroups(input: GroupSubGroupAddInput!): Boolean!
   removeGroupSubGroups(input: GroupSubGroupRemoveInput!): Boolean!

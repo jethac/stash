@@ -191,6 +191,7 @@ export type CriterionType =
   | "play_duration"
   | "last_played_at"
   | "name"
+  | "localized_title"
   | "details"
   | "title"
   | "oshash"

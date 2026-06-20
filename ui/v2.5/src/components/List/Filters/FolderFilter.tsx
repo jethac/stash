@@ -41,7 +41,7 @@ import ClearableInput from "src/components/Shared/ClearableInput";
 import { useDebouncedState } from "src/hooks/debounce";
 import { ModifierCriterionOption } from "src/models/list-filter/criteria/criterion";
 
-interface IFolder extends FolderDataFragment {
+export interface IFolder extends FolderDataFragment {
   children?: IFolder[];
   expanded: boolean;
 }
@@ -596,6 +596,43 @@ export const FolderFilter: React.FC<IInputFilterProps> = ({
           onToggleExpanded={onToggleExpanded}
           onSelect={onSelect}
           canExclude
+        />
+      </Form.Group>
+    </div>
+  );
+};
+
+export const FolderPathSelector: React.FC<{
+  mode?: FilterMode;
+  onSelect: (folder: IFolder) => void;
+}> = ({ mode, onSelect }) => {
+  const intl = useIntl();
+  const [query, setQuery] = useState("");
+  const [displayQuery, onQueryChange] = useDebouncedState(query, setQuery, 250);
+  const { folderMap, onToggleExpanded } = useFolderMap({ query, mode });
+
+  function onEnter() {
+    if (!query) return;
+
+    const matchingFolders = getMatchingFolders(folderMap, query);
+    if (matchingFolders.length === 1) {
+      onSelect(matchingFolders[0]);
+    }
+  }
+
+  return (
+    <div className="folder-filter">
+      <Form.Group>
+        <ClearableInput
+          value={displayQuery}
+          setValue={(v) => onQueryChange(v)}
+          placeholder={`${intl.formatMessage({ id: "actions.search" })}…`}
+          onEnter={onEnter}
+        />
+        <FolderSelector
+          folderMap={folderMap}
+          onToggleExpanded={onToggleExpanded}
+          onSelect={(folder) => onSelect(folder)}
         />
       </Form.Group>
     </div>

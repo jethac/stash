@@ -710,6 +710,7 @@ func TestGroupQuery(t *testing.T) {
 	var (
 		frontImage = "front_image"
 		backImage  = "back_image"
+		poster     = "poster"
 	)
 
 	tests := []struct {
@@ -725,6 +726,17 @@ func TestGroupQuery(t *testing.T) {
 			nil,
 			&models.GroupFilterType{
 				IsMissing: &frontImage,
+			},
+			// just ensure that it doesn't error
+			nil,
+			nil,
+			false,
+		},
+		{
+			"is missing poster",
+			nil,
+			&models.GroupFilterType{
+				IsMissing: &poster,
 			},
 			// just ensure that it doesn't error
 			nil,
@@ -792,6 +804,104 @@ func TestGroupQuery(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestGroupQueryLocalizedTitle(t *testing.T) {
+	withRollbackTxn(func(ctx context.Context) error {
+		assert := assert.New(t)
+		localizedTitle := models.LocalizedTitle{
+			ObjectType:   models.LocalizedTitleObjectTypeGroup,
+			ObjectID:     groupIDs[groupIdxWithScene],
+			LanguageCode: "ja",
+			Title:        "Localized Search Title",
+		}
+
+		if err := db.LocalizedTitle.Create(ctx, &localizedTitle); err != nil {
+			t.Fatalf("Error creating localized title: %s", err.Error())
+		}
+
+		q := "Localized Search"
+		findFilter := models.FindFilterType{
+			Q: &q,
+		}
+		groups := queryGroups(ctx, t, nil, &findFilter)
+
+		if assert.Len(groups, 1) {
+			assert.Equal(groupIDs[groupIdxWithScene], groups[0].ID)
+		}
+
+		titleCriterion := models.StringCriterionInput{
+			Value:    "Search Title",
+			Modifier: models.CriterionModifierIncludes,
+		}
+		filter := models.GroupFilterType{
+			LocalizedTitle: &titleCriterion,
+		}
+		groups = queryGroups(ctx, t, &filter, nil)
+
+		if assert.Len(groups, 1) {
+			assert.Equal(groupIDs[groupIdxWithScene], groups[0].ID)
+		}
+
+		titleCriterion.Value = "not present"
+		groups = queryGroups(ctx, t, &filter, nil)
+		assert.Empty(groups)
+
+		return nil
+	})
+}
+
+func TestGroupQueryIsMissingLocalizedTitle(t *testing.T) {
+	withRollbackTxn(func(ctx context.Context) error {
+		assert := assert.New(t)
+		localizedTitle := models.LocalizedTitle{
+			ObjectType:   models.LocalizedTitleObjectTypeGroup,
+			ObjectID:     groupIDs[groupIdxWithScene],
+			LanguageCode: "en",
+			Title:        "Has Localized Title",
+		}
+
+		if err := db.LocalizedTitle.Create(ctx, &localizedTitle); err != nil {
+			t.Fatalf("Error creating localized title: %s", err.Error())
+		}
+
+		isMissing := "localized_title"
+		filter := models.GroupFilterType{
+			IsMissing: &isMissing,
+		}
+		groups := queryGroups(ctx, t, &filter, nil)
+		ids := groupsToIDs(groups)
+
+		assert.NotContains(ids, groupIDs[groupIdxWithScene])
+		assert.Contains(ids, groupIDs[groupIdxWithStudio])
+
+		return nil
+	})
+}
+
+func TestGroupQueryFilesFilter(t *testing.T) {
+	withRollbackTxn(func(ctx context.Context) error {
+		assert := assert.New(t)
+
+		filter := models.GroupFilterType{
+			FilesFilter: &models.FileFilterType{
+				ParentFolder: &models.HierarchicalMultiCriterionInput{
+					Value: []string{
+						strconv.Itoa(int(folderIDs[folderIdxWithSceneFiles])),
+					},
+					Modifier: models.CriterionModifierIncludes,
+				},
+			},
+		}
+
+		groups := queryGroups(ctx, t, &filter, nil)
+		ids := groupsToIDs(groups)
+
+		assert.Contains(ids, groupIDs[groupIdxWithScene])
+		assert.NotContains(ids, groupIDs[groupIdxWithStudio])
+
+		return nil
+	})
 }
 
 func TestGroupQueryStudio(t *testing.T) {
@@ -1091,6 +1201,118 @@ func TestGroupQuerySorting(t *testing.T) {
 
 		return nil
 	})
+}
+
+func TestGroupQueryPerformerCount(t *testing.T) {
+	runWithRollbackTxn(t, "performer count", func(t *testing.T, ctx context.Context) {
+		assert := assert.New(t)
+		groups := createGroupPerformerCountFixture(t, ctx)
+
+		countCriterion := models.IntCriterionInput{
+			Value:    1,
+			Modifier: models.CriterionModifierEquals,
+		}
+		groupFilter := models.GroupFilterType{
+			PerformerCount: &countCriterion,
+		}
+
+		results := queryGroups(ctx, t, &groupFilter, nil)
+		ids := groupsToIDs(results)
+		assert.Contains(ids, groups[1].ID)
+		assert.NotContains(ids, groups[0].ID)
+		assert.NotContains(ids, groups[2].ID)
+
+		countCriterion.Value = 1
+		countCriterion.Modifier = models.CriterionModifierGreaterThan
+		results = queryGroups(ctx, t, &groupFilter, nil)
+		ids = groupsToIDs(results)
+		assert.Contains(ids, groups[2].ID)
+		assert.NotContains(ids, groups[0].ID)
+		assert.NotContains(ids, groups[1].ID)
+
+		countCriterion.Value = 1
+		countCriterion.Modifier = models.CriterionModifierLessThan
+		results = queryGroups(ctx, t, &groupFilter, nil)
+		ids = groupsToIDs(results)
+		assert.Contains(ids, groups[0].ID)
+		assert.NotContains(ids, groups[1].ID)
+		assert.NotContains(ids, groups[2].ID)
+	})
+}
+
+func TestGroupQuerySortPerformerCount(t *testing.T) {
+	runWithRollbackTxn(t, "sort performer count", func(t *testing.T, ctx context.Context) {
+		assert := assert.New(t)
+		groups := createGroupPerformerCountFixture(t, ctx)
+
+		sort := "performer_count"
+		direction := models.SortDirectionEnumAsc
+		q := "performer-count-group-"
+		findFilter := models.FindFilterType{
+			Q:         &q,
+			Sort:      &sort,
+			Direction: &direction,
+		}
+
+		results := queryGroups(ctx, t, nil, &findFilter)
+		assert.Equal([]int{groups[0].ID, groups[1].ID, groups[2].ID}, groupsToIDs(results))
+
+		direction = models.SortDirectionEnumDesc
+		results = queryGroups(ctx, t, nil, &findFilter)
+		assert.Equal([]int{groups[2].ID, groups[1].ID, groups[0].ID}, groupsToIDs(results))
+	})
+}
+
+func createGroupPerformerCountFixture(t *testing.T, ctx context.Context) []*models.Group {
+	t.Helper()
+
+	groups := []*models.Group{
+		{Name: "performer-count-group-0"},
+		{Name: "performer-count-group-1"},
+		{Name: "performer-count-group-2"},
+	}
+	for _, group := range groups {
+		assert.NoError(t, db.Group.Create(ctx, group))
+	}
+
+	performers := []*models.Performer{
+		{Name: "performer-count-performer-1"},
+		{Name: "performer-count-performer-2"},
+	}
+	for _, performer := range performers {
+		assert.NoError(t, db.Performer.Create(ctx, &models.CreatePerformerInput{
+			Performer: performer,
+		}))
+	}
+
+	scenes := []*models.Scene{
+		{
+			Title:        "performer-count-scene-1",
+			PerformerIDs: models.NewRelatedIDs([]int{performers[0].ID}),
+			Groups: models.NewRelatedGroups([]models.GroupsScenes{
+				{GroupID: groups[1].ID},
+			}),
+		},
+		{
+			Title:        "performer-count-scene-2",
+			PerformerIDs: models.NewRelatedIDs([]int{performers[0].ID, performers[1].ID}),
+			Groups: models.NewRelatedGroups([]models.GroupsScenes{
+				{GroupID: groups[2].ID},
+			}),
+		},
+		{
+			Title:        "performer-count-scene-3",
+			PerformerIDs: models.NewRelatedIDs([]int{performers[1].ID}),
+			Groups: models.NewRelatedGroups([]models.GroupsScenes{
+				{GroupID: groups[2].ID},
+			}),
+		},
+	}
+	for _, scene := range scenes {
+		assert.NoError(t, db.Scene.Create(ctx, scene, nil))
+	}
+
+	return groups
 }
 
 func TestGroupQuerySortOrderIndex(t *testing.T) {

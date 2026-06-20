@@ -1,8 +1,8 @@
-import React, { useCallback, useEffect } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import cloneDeep from "lodash-es/cloneDeep";
 import Mousetrap from "mousetrap";
-import { useHistory } from "react-router-dom";
+import { useHistory, useLocation } from "react-router-dom";
 import { ListFilterModel } from "src/models/list-filter/filter";
 import { DisplayMode } from "src/models/list-filter/types";
 import * as GQL from "src/core/generated-graphql";
@@ -46,7 +46,10 @@ import { LoadedContent } from "../List/PagedList";
 import { SidebarStudiosFilter } from "../List/Filters/StudiosFilter";
 import { SidebarTagsFilter } from "../List/Filters/TagsFilter";
 import { SidebarRatingFilter } from "../List/Filters/RatingFilter";
-import { Button } from "react-bootstrap";
+import { SidebarFolderFilter } from "../List/Filters/FolderFilter";
+import { Button, ButtonGroup, Form } from "react-bootstrap";
+import { NATIVE_TITLE_LANGUAGE } from "src/core/groups";
+import { IsMissingCriterion } from "src/models/list-filter/criteria/is-missing";
 
 const GroupList: React.FC<{
   groups: GQL.ListGroupDataFragment[];
@@ -55,9 +58,18 @@ const GroupList: React.FC<{
   onSelectChange: (id: string, selected: boolean, shiftKey: boolean) => void;
   fromGroupId?: string;
   onMove?: (srcIds: string[], targetId: string, after: boolean) => void;
+  titleLanguage?: string;
 }> = PatchComponent(
   "GroupList",
-  ({ groups, filter, selectedIds, onSelectChange, fromGroupId, onMove }) => {
+  ({
+    groups,
+    filter,
+    selectedIds,
+    onSelectChange,
+    fromGroupId,
+    onMove,
+    titleLanguage,
+  }) => {
     if (groups.length === 0) {
       return null;
     }
@@ -71,6 +83,7 @@ const GroupList: React.FC<{
           onSelectChange={onSelectChange}
           fromGroupId={fromGroupId}
           onMove={onMove}
+          titleLanguage={titleLanguage}
         />
       );
     }
@@ -82,6 +95,25 @@ const GroupList: React.FC<{
 const GroupFilterSidebarSections = PatchContainerComponent(
   "FilteredGroupList.SidebarSections"
 );
+
+const movieCleanupFilters = [
+  {
+    value: "poster",
+    messageID: "movie_cleanup.missing_poster",
+  },
+  {
+    value: "localized_title",
+    messageID: "movie_cleanup.missing_localized_title",
+  },
+  {
+    value: "performers",
+    messageID: "movie_cleanup.missing_performers",
+  },
+  {
+    value: "studio",
+    messageID: "movie_cleanup.missing_studio",
+  },
+] as const;
 
 const SidebarContent: React.FC<{
   filter: ListFilterModel;
@@ -134,6 +166,12 @@ const SidebarContent: React.FC<{
           filterHook={filterHook}
         />
         <SidebarRatingFilter filter={filter} setFilter={setFilter} />
+        <SidebarFolderFilter
+          text={<FormattedMessage id="folder" />}
+          filter={filter}
+          setFilter={setFilter}
+          sectionID="folder"
+        />
       </GroupFilterSidebarSections>
 
       <div className="sidebar-footer">
@@ -202,6 +240,9 @@ export const FilteredGroupList = PatchComponent(
   "FilteredGroupList",
   (props: IGroupList) => {
     const intl = useIntl();
+    const location = useLocation();
+    const history = useHistory();
+    const [titleLanguage, setTitleLanguage] = useState(NATIVE_TITLE_LANGUAGE);
 
     const searchFocus = useFocus();
 
@@ -258,6 +299,21 @@ export const FilteredGroupList = PatchComponent(
 
     const { modal, showModal, closeModal } = modalState;
 
+    const titleLanguageOptions = useMemo(() => {
+      const languageCodes = new Set<string>();
+      items.forEach((group) => {
+        group.localized_titles.forEach((title) => {
+          languageCodes.add(title.language_code);
+        });
+      });
+
+      if (titleLanguage !== NATIVE_TITLE_LANGUAGE) {
+        languageCodes.add(titleLanguage);
+      }
+
+      return Array.from(languageCodes).sort((a, b) => a.localeCompare(b));
+    }, [items, titleLanguage]);
+
     // Utility hooks
     const { setPage, removeCriterion, clearAllCriteria } = useFilterOperations({
       filter,
@@ -296,6 +352,23 @@ export const FilteredGroupList = PatchComponent(
     });
 
     const viewRandom = useViewRandom(effectiveFilter, totalCount);
+    const isMovieRoute = location.pathname.startsWith("/movies");
+    const activeMissingCriterion = filter.criteriaFor("is_missing")[0] as
+      | IsMissingCriterion
+      | undefined;
+
+    function setMovieCleanupFilter(value: string) {
+      if (activeMissingCriterion?.value === value) {
+        setFilter(filter.removeCriterion("is_missing"));
+        return;
+      }
+
+      const criterion = filter.makeCriterion(
+        "is_missing"
+      ) as IsMissingCriterion;
+      criterion.value = value;
+      setFilter(filter.replaceCriteria("is_missing", [criterion]));
+    }
 
     function onExport(all: boolean) {
       showModal(
@@ -391,6 +464,60 @@ export const FilteredGroupList = PatchComponent(
       />
     );
 
+    const titleLanguageControl = titleLanguageOptions.length > 0 && (
+      <div className="group-title-language-control">
+        <label htmlFor="group-title-language">
+          <FormattedMessage id="title_language" />
+        </label>
+        <Form.Control
+          as="select"
+          id="group-title-language"
+          size="sm"
+          value={titleLanguage}
+          onChange={(e) => setTitleLanguage(e.currentTarget.value)}
+        >
+          <option value={NATIVE_TITLE_LANGUAGE}>
+            {intl.formatMessage({ id: "native_title" })}
+          </option>
+          {titleLanguageOptions.map((languageCode) => (
+            <option key={languageCode} value={languageCode}>
+              {languageCode.toUpperCase()}
+            </option>
+          ))}
+        </Form.Control>
+      </div>
+    );
+
+    const movieCleanupControl = isMovieRoute && (
+      <div className="movie-cleanup-control">
+        <span className="movie-cleanup-control__label">
+          {intl.formatMessage({ id: "movie_cleanup.title" })}
+        </span>
+        <Button
+          size="sm"
+          variant="secondary"
+          onClick={() => history.push("/movies/match")}
+        >
+          {intl.formatMessage({ id: "movie_match.title" })}
+        </Button>
+        <ButtonGroup size="sm">
+          {movieCleanupFilters.map((cleanupFilter) => (
+            <Button
+              key={cleanupFilter.value}
+              variant={
+                activeMissingCriterion?.value === cleanupFilter.value
+                  ? "primary"
+                  : "secondary"
+              }
+              onClick={() => setMovieCleanupFilter(cleanupFilter.value)}
+            >
+              {intl.formatMessage({ id: cleanupFilter.messageID })}
+            </Button>
+          ))}
+        </ButtonGroup>
+      </div>
+    );
+
     const content = (
       <>
         <FilteredListToolbar
@@ -404,6 +531,10 @@ export const FilteredGroupList = PatchComponent(
           view={view}
           zoomable
         />
+
+        {titleLanguageControl}
+
+        {movieCleanupControl}
 
         <FilterTags
           criteria={filter.criteria}
@@ -435,6 +566,7 @@ export const FilteredGroupList = PatchComponent(
             onSelectChange={onSelectChange}
             fromGroupId={fromGroupId}
             onMove={canMove ? onMove : undefined}
+            titleLanguage={titleLanguage}
           />
         </LoadedContent>
 

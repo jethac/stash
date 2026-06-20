@@ -23,6 +23,9 @@
     "hair_color": "Hair Color",
     "organized": "Organized",
     "performer_favorite": "Performer Favorited",
+    "movie_match": {
+        "title": "Match"
+    },
     "component_tagger": {
         "config": {
             "mark_organized_label": "Mark as Organized on save"

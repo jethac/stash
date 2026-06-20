@@ -33,6 +33,7 @@ interface IGroupDetailsPanel {
   group: GQL.GroupDataFragment;
   collapsed?: boolean;
   fullWidth?: boolean;
+  displayTitle?: string;
 }
 
 export const GroupDetailsPanel: React.FC<IGroupDetailsPanel> = ({
@@ -109,6 +110,7 @@ export const GroupDetailsPanel: React.FC<IGroupDetailsPanel> = ({
 
 export const CompressedGroupDetailsPanel: React.FC<IGroupDetailsPanel> = ({
   group,
+  displayTitle,
 }) => {
   function scrollToTop() {
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -118,7 +120,7 @@ export const CompressedGroupDetailsPanel: React.FC<IGroupDetailsPanel> = ({
     <div className="sticky detail-header">
       <div className="sticky detail-header-group">
         <a className="group-name" onClick={() => scrollToTop()}>
-          {group.name}
+          {displayTitle ?? group.name}
         </a>
         {group?.studio?.name ? (
           <>

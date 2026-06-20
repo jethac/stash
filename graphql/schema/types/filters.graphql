@@ -183,6 +183,8 @@ input PerformerFilterType {
   image_count: IntCriterionInput
   "Filter by gallery count"
   gallery_count: IntCriterionInput
+  "Filter by group count"
+  group_count: IntCriterionInput
   "Filter by play count"
   play_count: IntCriterionInput
   "Filter by o count"
@@ -387,6 +389,8 @@ input MovieFilterType {
   name: StringCriterionInput
   director: StringCriterionInput
   synopsis: StringCriterionInput
+  "Filter by localized title"
+  localized_title: StringCriterionInput
 
   "Filter by duration (in seconds)"
   duration: IntCriterionInput
@@ -415,6 +419,8 @@ input MovieFilterType {
   scenes_filter: SceneFilterType
   "Filter by related studios that meet this criteria"
   studios_filter: StudioFilterType
+  "Filter by related scene files that meet this criteria"
+  files_filter: FileFilterType
 }
 
 input GroupFilterType {
@@ -461,11 +467,15 @@ input GroupFilterType {
   sub_group_count: IntCriterionInput
   "Filter by number of scenes the group has"
   scene_count: IntCriterionInput
+  "Filter by number of performers appearing in the group's scenes"
+  performer_count: IntCriterionInput
 
   "Filter by related scenes that meet this criteria"
   scenes_filter: SceneFilterType
   "Filter by related studios that meet this criteria"
   studios_filter: StudioFilterType
+  "Filter by related scene files that meet this criteria"
+  files_filter: FileFilterType
 
   "Filter by custom fields"
   custom_fields: [CustomFieldCriterionInput!]
