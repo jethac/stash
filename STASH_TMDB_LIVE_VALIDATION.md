@@ -139,4 +139,5 @@ Suggested variables:
 - A bulk root dry-run against the same folder returns the same high-confidence candidate through the `roots` scanner.
 - HTTP checks confirmed `/movies` and `/movies/match` both return `200`.
 - Movie-list GraphQL data for the updated group includes poster path, date, localized titles, and scene count, which are the fields rendered by `/movies`.
-- The in-app browser was unavailable in this Codex session, so visual browser inspection could not be performed from the tool surface.
+- Headless Chrome visual inspection confirmed `/movies?p=11&sortby=name` renders the updated group card with poster image, title, `2021`, runtime, scene count, and performer count.
+- The in-app browser was unavailable in this Codex session, so visual browser inspection used local headless Chrome instead.
